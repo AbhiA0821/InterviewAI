@@ -46,7 +46,7 @@ export default function LiveInterviewPage() {
     transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [interview?.transcript]);
 
-  // Real-time Candidate Webcam Stream (Works on Android Mobile & Desktop)
+  // Real-time Candidate Webcam Stream (Android & Desktop Compatible)
   useEffect(() => {
     let stream: MediaStream | null = null;
     async function startCamera() {
@@ -80,7 +80,7 @@ export default function LiveInterviewPage() {
     };
   }, [cameraEnabled]);
 
-  // Start speech recognition for voice-only mode
+  // Speech recognition for voice chat
   const startAutoVoiceListening = () => {
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -94,7 +94,7 @@ export default function LiveInterviewPage() {
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
-      recognition.lang = "en-IN"; // Indian English speech input
+      recognition.lang = "en-IN"; // Indian English voice input
 
       recognition.onresult = (event: any) => {
         let transcript = "";
@@ -122,7 +122,7 @@ export default function LiveInterviewPage() {
     }
   };
 
-  // Read aloud interviewer questions using Web Speech Synthesis with Indian English voice targeting
+  // Speak questions using Web Speech Synthesis
   const speakText = (text: string) => {
     if (!speechEnabled || !("speechSynthesis" in window)) {
       startAutoVoiceListening();
@@ -168,7 +168,6 @@ export default function LiveInterviewPage() {
     };
 
     utterance.onend = () => {
-      // Auto-turn on microphone when AI finishes speaking!
       setAvatarStatus("listening");
       startAutoVoiceListening();
     };
@@ -274,7 +273,7 @@ export default function LiveInterviewPage() {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-4">
         <Loader2 className="h-10 w-10 text-indigo-500 animate-spin" />
-        <p className="text-muted-foreground font-medium">Entering Live AI Voice & Video Interview Room...</p>
+        <p className="text-muted-foreground font-medium">Entering Face-to-Face AI Interview Room...</p>
       </div>
     );
   }
@@ -305,7 +304,7 @@ export default function LiveInterviewPage() {
           </div>
           <div>
             <h1 className="font-bold text-lg sm:text-xl text-foreground">
-              {interview.target_role} (Voice & Camera)
+              {interview.target_role} (Face-to-Face Video Call)
             </h1>
             <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
               <span className="font-medium text-indigo-400">
@@ -394,158 +393,163 @@ export default function LiveInterviewPage() {
         </div>
       )}
 
-      {/* Main Responsive Grid: AI Interviewer & Live Candidate Camera (Works on Android & Desktop) */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-        {/* Left Column: AI Avatar Card + Candidate Live Webcam Video Feed */}
-        <div className="md:col-span-5 lg:col-span-4 space-y-6">
-          <InterviewerAvatar
-            gender={interviewerGender}
-            onGenderChange={(g) => {
-              setInterviewerGender(g);
-              window.speechSynthesis?.cancel();
-            }}
-            status={avatarStatus}
-            interviewerName={interviewerName}
-            speakingBoundaryTick={speakingBoundaryTick}
-          />
+      {/* Face-to-Face Dual Video Stream Deck (Side-by-Side: AI Avatar & Candidate Camera) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Left Video Deck: AI Interviewer Avatar */}
+        <InterviewerAvatar
+          gender={interviewerGender}
+          onGenderChange={(g) => {
+            setInterviewerGender(g);
+            window.speechSynthesis?.cancel();
+          }}
+          status={avatarStatus}
+          interviewerName={interviewerName}
+          speakingBoundaryTick={speakingBoundaryTick}
+        />
 
-          {/* Candidate Live Webcam Video Box (Mobile Android & Desktop Responsive) */}
-          <div className="relative overflow-hidden rounded-3xl border border-indigo-500/30 bg-card p-4 shadow-lg space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-2 text-xs font-bold text-foreground">
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span>Candidate Live Camera</span>
-              </span>
-              <button
-                onClick={() => setCameraEnabled(!cameraEnabled)}
-                className="text-xs text-muted-foreground hover:text-foreground"
+        {/* Right Video Deck: Candidate Live Webcam Feed */}
+        <div className="relative overflow-hidden rounded-3xl border border-indigo-500/30 bg-gradient-to-b from-indigo-950/60 via-card to-card p-6 shadow-2xl flex flex-col justify-between space-y-4">
+          <div className="flex items-center justify-between z-10">
+            <span className="flex items-center gap-2 text-sm font-bold text-foreground">
+              <span className="h-3 w-3 rounded-full bg-emerald-500 animate-pulse" />
+              <span>You (Candidate Live Stream)</span>
+            </span>
+            <button
+              onClick={() => setCameraEnabled(!cameraEnabled)}
+              className="text-xs text-indigo-300 font-semibold hover:underline"
+            >
+              {cameraEnabled ? "Turn Off Camera" : "Turn On Camera"}
+            </button>
+          </div>
+
+          <div className="relative h-56 md:h-64 w-full rounded-2xl overflow-hidden bg-black/90 flex items-center justify-center border border-indigo-500/30 shadow-inner">
+            {cameraEnabled ? (
+              <video
+                ref={userVideoRef}
+                autoPlay
+                playsInline
+                muted
+                className="h-full w-full object-cover transform -scale-x-100"
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center space-y-2 text-muted-foreground">
+                <CameraOff className="h-10 w-10 opacity-60" />
+                <span className="text-xs font-semibold">Camera Stream Paused</span>
+              </div>
+            )}
+          </div>
+
+          <div className="text-center text-xs text-muted-foreground font-medium pt-1">
+            <span>Facing AI Interviewer • Real-time Voice Chat</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Transcript & Auto-Listen Voice Controls */}
+      <div className="rounded-3xl border border-border/80 bg-card p-5 sm:p-8 shadow-md space-y-6">
+        <h2 className="font-bold text-lg text-foreground border-b border-border/60 pb-3">
+          Live Interview Transcript & Voice Output
+        </h2>
+
+        <div className="space-y-4 overflow-y-auto max-h-[320px] pr-2">
+          {interview.transcript?.map((item, idx) => (
+            <div
+              key={idx}
+              className={`flex items-start gap-3.5 ${
+                item.role === "user" ? "flex-row-reverse" : "flex-row"
+              }`}
+            >
+              <div
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl font-bold text-sm text-white ${
+                  item.role === "user"
+                    ? "bg-purple-600"
+                    : "bg-gradient-to-tr from-indigo-600 to-violet-600"
+                }`}
               >
-                {cameraEnabled ? "Disable" : "Enable"}
-              </button>
+                {item.role === "user" ? <User className="h-5 w-5" /> : <Bot className="h-5 w-5" />}
+              </div>
+
+              <div
+                className={`max-w-[85%] rounded-2xl p-4 text-sm leading-relaxed ${
+                  item.role === "user"
+                    ? "bg-purple-600/15 border border-purple-500/20 text-foreground rounded-tr-none"
+                    : "bg-indigo-500/10 border border-indigo-500/20 text-foreground rounded-tl-none"
+                }`}
+              >
+                <div className="font-semibold text-xs mb-1 text-muted-foreground">
+                  {item.role === "user" ? "You (Candidate)" : interviewerName}
+                </div>
+                <p>{item.text}</p>
+              </div>
+            </div>
+          ))}
+          <div ref={transcriptEndRef} />
+        </div>
+
+        {/* Voice-Only Input Section */}
+        <div className="pt-4 border-t border-border/60 space-y-4">
+          <div className="rounded-2xl border border-indigo-500/30 bg-indigo-500/10 p-4 text-sm text-foreground space-y-2">
+            <div className="flex items-center justify-between text-xs font-semibold text-indigo-400">
+              <span className="flex items-center gap-1.5">
+                <Mic className={`h-4 w-4 ${isRecording ? "animate-pulse text-red-400" : ""}`} />
+                <span>{isRecording ? "Microphone Active (Listening...)" : "Voice Chat Only"}</span>
+              </span>
+              {isRecording && <span className="h-2 w-2 rounded-full bg-red-500 animate-ping" />}
             </div>
 
-            <div className="relative h-44 w-full rounded-2xl overflow-hidden bg-black/80 flex items-center justify-center border border-border/60">
-              {cameraEnabled ? (
-                <video
-                  ref={userVideoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="h-full w-full object-cover transform -scale-x-100"
-                />
+            <div className="font-medium text-foreground min-h-[48px] italic">
+              {voiceTranscript ? (
+                `"${voiceTranscript}"`
+              ) : isRecording ? (
+                <span className="text-muted-foreground not-italic">
+                  Speak your answer aloud... (Voice auto-transcribing in real time)
+                </span>
               ) : (
-                <div className="flex flex-col items-center justify-center space-y-2 text-muted-foreground">
-                  <CameraOff className="h-8 w-8 opacity-60" />
-                  <span className="text-xs">Camera Paused</span>
-                </div>
+                <span className="text-muted-foreground not-italic">
+                  Microphone paused. Click "Start Voice Mic" to speak.
+                </span>
               )}
             </div>
           </div>
-        </div>
 
-        {/* Right Column: Voice Chat Transcript & Auto-Mic Controls */}
-        <div className="md:col-span-7 lg:col-span-8 rounded-3xl border border-border/80 bg-card p-5 sm:p-8 shadow-md flex flex-col justify-between min-h-[480px]">
-          <div className="space-y-4 overflow-y-auto max-h-[380px] pr-2">
-            {interview.transcript?.map((item, idx) => (
-              <div
-                key={idx}
-                className={`flex items-start gap-3.5 ${
-                  item.role === "user" ? "flex-row-reverse" : "flex-row"
-                }`}
-              >
-                <div
-                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl font-bold text-sm text-white ${
-                    item.role === "user"
-                      ? "bg-purple-600"
-                      : "bg-gradient-to-tr from-indigo-600 to-violet-600"
-                  }`}
-                >
-                  {item.role === "user" ? <User className="h-5 w-5" /> : <Bot className="h-5 w-5" />}
-                </div>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={toggleRecording}
+              className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-3 px-4 text-sm font-semibold transition-all ${
+                isRecording
+                  ? "bg-red-500 text-white animate-pulse shadow-lg shadow-red-500/30"
+                  : "bg-muted text-foreground border border-border hover:bg-accent"
+              }`}
+            >
+              {isRecording ? (
+                <>
+                  <MicOff className="h-4 w-4" />
+                  <span>Pause Mic</span>
+                </>
+              ) : (
+                <>
+                  <Mic className="h-4 w-4 text-indigo-400" />
+                  <span>Start Voice Mic</span>
+                </>
+              )}
+            </button>
 
-                <div
-                  className={`max-w-[85%] rounded-2xl p-4 text-sm leading-relaxed ${
-                    item.role === "user"
-                      ? "bg-purple-600/15 border border-purple-500/20 text-foreground rounded-tr-none"
-                      : "bg-indigo-500/10 border border-indigo-500/20 text-foreground rounded-tl-none"
-                  }`}
-                >
-                  <div className="font-semibold text-xs mb-1 text-muted-foreground">
-                    {item.role === "user" ? "You (Candidate Voice)" : interviewerName}
-                  </div>
-                  <p>{item.text}</p>
-                </div>
-              </div>
-            ))}
-            <div ref={transcriptEndRef} />
-          </div>
-
-          {/* Voice-Only Input & Real-Time Auto Transcriber */}
-          <div className="pt-4 border-t border-border/60 space-y-4">
-            <div className="rounded-2xl border border-indigo-500/30 bg-indigo-500/10 p-4 text-sm text-foreground space-y-2">
-              <div className="flex items-center justify-between text-xs font-semibold text-indigo-400">
-                <span className="flex items-center gap-1.5">
-                  <Mic className={`h-4 w-4 ${isRecording ? "animate-pulse text-red-400" : ""}`} />
-                  <span>{isRecording ? "Microphone Active (Listening...)" : "Voice Chat Only"}</span>
-                </span>
-                {isRecording && <span className="h-2 w-2 rounded-full bg-red-500 animate-ping" />}
-              </div>
-
-              <div className="font-medium text-foreground min-h-[48px] italic">
-                {voiceTranscript ? (
-                  `"${voiceTranscript}"`
-                ) : isRecording ? (
-                  <span className="text-muted-foreground not-italic">
-                    Speak your answer aloud... (Voice auto-transcribing in real time)
-                  </span>
-                ) : (
-                  <span className="text-muted-foreground not-italic">
-                    Microphone paused. Click "Start Voice Mic" to speak.
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Voice Control Buttons */}
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={toggleRecording}
-                className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-3 px-4 text-sm font-semibold transition-all ${
-                  isRecording
-                    ? "bg-red-500 text-white animate-pulse shadow-lg shadow-red-500/30"
-                    : "bg-muted text-foreground border border-border hover:bg-accent"
-                }`}
-              >
-                {isRecording ? (
-                  <>
-                    <MicOff className="h-4 w-4" />
-                    <span>Pause Mic</span>
-                  </>
-                ) : (
-                  <>
-                    <Mic className="h-4 w-4 text-indigo-400" />
-                    <span>Start Voice Mic</span>
-                  </>
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={handleSendVoiceAnswer}
-                disabled={!voiceTranscript.trim() || submitting}
-                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-6 py-3 text-sm font-bold text-white shadow-lg transition-all hover:opacity-90 disabled:opacity-40"
-              >
-                {submitting ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <>
-                    <span>Submit Answer</span>
-                    <Send className="h-4 w-4" />
-                  </>
-                )}
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={handleSendVoiceAnswer}
+              disabled={!voiceTranscript.trim() || submitting}
+              className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-6 py-3 text-sm font-bold text-white shadow-lg transition-all hover:opacity-90 disabled:opacity-40"
+            >
+              {submitting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <span>Submit Voice Answer</span>
+                  <Send className="h-4 w-4" />
+                </>
+              )}
+            </button>
           </div>
         </div>
       </div>
