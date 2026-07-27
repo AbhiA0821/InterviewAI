@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Mic, Sparkles, UserCheck } from "lucide-react";
+import { Mic, Sparkles, UserCheck, Volume2 } from "lucide-react";
 
 export interface InterviewerAvatarProps {
   gender: "female" | "male";
@@ -16,40 +16,39 @@ export const InterviewerAvatar: React.FC<InterviewerAvatarProps> = ({
   interviewerName,
   speakingBoundaryTick = 0,
 }) => {
-  const [mouthOpenness, setMouthOpenness] = useState(0.2);
+  const [speechPulse, setSpeechPulse] = useState(1);
   const avatarImage = gender === "female" ? "/avatars/female.png" : "/avatars/male.png";
 
-  // Dynamic realistic lip-syncing driven by speech boundary ticks & speech waveform
+  // Micro-motion speech pulse effect (realistic face/jaw micro-movement on speech boundaries)
   useEffect(() => {
     if (status === "speaking") {
-      // Dynamic viseme mouth opening calculation
-      const openness = 0.3 + Math.random() * 0.7;
-      setMouthOpenness(openness);
+      const pulse = 1.0 + Math.random() * 0.04;
+      setSpeechPulse(pulse);
 
       const timer = setTimeout(() => {
-        setMouthOpenness(0.15);
-      }, 120);
+        setSpeechPulse(1.0);
+      }, 100);
 
       return () => clearTimeout(timer);
     } else {
-      setMouthOpenness(0.05);
+      setSpeechPulse(1.0);
     }
   }, [status, speakingBoundaryTick]);
 
   return (
     <div className="relative overflow-hidden rounded-3xl border border-indigo-500/30 bg-gradient-to-b from-indigo-950/60 via-card to-card p-6 text-center shadow-xl space-y-4">
-      {/* Ambient Pulsing Glow Background */}
+      {/* Background Ambient Glow */}
       <div
         className={`absolute -top-12 left-1/2 -translate-x-1/2 h-48 w-48 rounded-full blur-3xl transition-all duration-700 ${
           status === "speaking"
-            ? "bg-indigo-500/45 scale-125"
+            ? "bg-indigo-500/40 scale-125"
             : status === "listening"
-            ? "bg-purple-500/35 scale-110"
+            ? "bg-purple-500/30 scale-110"
             : "bg-indigo-500/15"
         }`}
       />
 
-      {/* Avatar Headshot Container with Animated Ring & Lip-Sync Morph */}
+      {/* Avatar Container with Realistic Speech Micro-Motion & Glowing Border */}
       <div className="relative inline-block mx-auto">
         <div
           className={`relative h-48 w-48 md:h-56 md:w-56 rounded-full p-1.5 transition-all duration-300 ${
@@ -60,104 +59,72 @@ export const InterviewerAvatar: React.FC<InterviewerAvatarProps> = ({
               : "ring-2 ring-indigo-500/30"
           }`}
         >
-          {/* Main Professional Indian Avatar Image */}
-          <img
-            src={avatarImage}
-            alt={`${interviewerName} AI Interviewer`}
-            className="h-full w-full rounded-full object-cover shadow-inner"
-          />
+          {/* Realistic Professional Avatar Image with Subtle Speech Motion */}
+          <div className="h-full w-full rounded-full overflow-hidden shadow-inner">
+            <img
+              src={avatarImage}
+              alt={`${interviewerName} AI Interviewer`}
+              className="h-full w-full object-cover transition-transform duration-100 ease-out"
+              style={{
+                transform: `scale(${speechPulse}) translateY(${
+                  status === "speaking" ? (speechPulse - 1) * -8 : 0
+                }px)`,
+              }}
+            />
+          </div>
 
-          {/* Ultra-Smooth SVG Viseme Mouth Lip-Sync Overlay */}
+          {/* Real-time Audio Waveform Bar Indicator while Speaking */}
           {status === "speaking" && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <svg
-                viewBox="0 0 100 100"
-                className="w-full h-full"
-                style={{
-                  transform: "translateY(16px)",
-                }}
-              >
-                {/* Lip Shape Viseme Morphing */}
-                <ellipse
-                  cx="50"
-                  cy="68"
-                  rx={10 + mouthOpenness * 4}
-                  ry={2 + mouthOpenness * 7}
-                  fill="#4A0404"
-                  opacity="0.85"
-                  className="transition-all duration-75 ease-out"
+            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-full bg-indigo-950/95 border border-indigo-500/60 px-4 py-1.5 text-white shadow-2xl text-xs font-bold backdrop-blur">
+              <Volume2 className="h-4 w-4 text-indigo-400 animate-pulse" />
+              <span className="flex items-center gap-0.5 ml-0.5">
+                <span
+                  className="w-1 bg-indigo-400 rounded-full animate-bounce"
+                  style={{ height: "10px", animationDelay: "0ms" }}
                 />
-                {/* Upper Lip Contour */}
-                <path
-                  d={`M ${40 - mouthOpenness * 2} 66 Q 50 ${
-                    65 - mouthOpenness * 2
-                  } ${60 + mouthOpenness * 2} 66`}
-                  stroke="#8B2500"
-                  strokeWidth="1.5"
-                  fill="none"
+                <span
+                  className="w-1 bg-indigo-400 rounded-full animate-bounce"
+                  style={{ height: "14px", animationDelay: "150ms" }}
                 />
-                {/* Lower Lip Line */}
-                <path
-                  d={`M ${42 - mouthOpenness * 2} ${68 + mouthOpenness * 6} Q 50 ${
-                    71 + mouthOpenness * 7
-                  } ${58 + mouthOpenness * 2} ${68 + mouthOpenness * 6}`}
-                  stroke="#A52A2A"
-                  strokeWidth="1.2"
-                  fill="none"
+                <span
+                  className="w-1 bg-indigo-400 rounded-full animate-bounce"
+                  style={{ height: "8px", animationDelay: "300ms" }}
                 />
-              </svg>
-            </div>
-          )}
-
-          {/* Speaking Audio Equalizer Waveform */}
-          {status === "speaking" && (
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-full bg-indigo-950/95 border border-indigo-500/60 px-3.5 py-1 text-white shadow-2xl text-xs font-bold backdrop-blur">
-              <span
-                className="w-1 bg-indigo-400 rounded-full animate-bounce"
-                style={{ height: `${8 + Math.random() * 12}px`, animationDelay: "0ms" }}
-              />
-              <span
-                className="w-1 bg-indigo-400 rounded-full animate-bounce"
-                style={{ height: `${12 + Math.random() * 14}px`, animationDelay: "150ms" }}
-              />
-              <span
-                className="w-1 bg-indigo-400 rounded-full animate-bounce"
-                style={{ height: `${10 + Math.random() * 12}px`, animationDelay: "300ms" }}
-              />
-              <span className="ml-1 text-[11px] text-indigo-200">Speaking...</span>
+              </span>
+              <span className="ml-1 text-xs text-indigo-200">AI Speaking</span>
             </div>
           )}
 
           {/* Listening Badge */}
           {status === "listening" && (
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 rounded-full bg-purple-950/95 border border-purple-500/60 px-3.5 py-1 text-white shadow-2xl text-xs font-bold backdrop-blur">
-              <Mic className="h-3.5 w-3.5 text-purple-400 animate-pulse" />
-              <span>Listening to you...</span>
+            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5 rounded-full bg-purple-950/95 border border-purple-500/60 px-4 py-1.5 text-white shadow-2xl text-xs font-bold backdrop-blur">
+              <Mic className="h-4 w-4 text-purple-400 animate-pulse" />
+              <span>Listening to candidate...</span>
             </div>
           )}
 
           {/* Thinking Badge */}
           {status === "thinking" && (
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 rounded-full bg-indigo-950/95 border border-indigo-500/60 px-3.5 py-1 text-white shadow-2xl text-xs font-bold backdrop-blur">
-              <Sparkles className="h-3.5 w-3.5 text-indigo-400 animate-spin" />
-              <span>Evaluating response...</span>
+            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5 rounded-full bg-indigo-950/95 border border-indigo-500/60 px-4 py-1.5 text-white shadow-2xl text-xs font-bold backdrop-blur">
+              <Sparkles className="h-4 w-4 text-indigo-400 animate-spin" />
+              <span>AI is evaluating response...</span>
             </div>
           )}
         </div>
       </div>
 
-      {/* Professional Persona Information */}
-      <div className="space-y-3 relative z-10">
+      {/* Professional Interviewer Credentials */}
+      <div className="space-y-3 relative z-10 pt-2">
         <div>
           <h3 className="text-xl font-extrabold text-foreground tracking-tight">
             {interviewerName}
           </h3>
           <p className="text-xs text-indigo-300 font-medium mt-0.5">
-            Senior Professional Interviewer • Indian Accent
+            Senior AI Interviewer • Indian English Accent
           </p>
         </div>
 
-        {/* Voice & Persona Switcher */}
+        {/* Male vs Female Voice Switcher */}
         <div className="flex items-center justify-center gap-2 pt-1">
           <button
             type="button"
