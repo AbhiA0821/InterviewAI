@@ -8,7 +8,9 @@ from app.database.session import get_db
 from app.models.feedback import Feedback
 from app.models.interview import Interview
 from app.models.resume import Resume
+from app.services.ai_service import ai_service
 from app.services.gemini_service import gemini_service
+from app.services.simli_service import simli_service
 
 router = APIRouter()
 
@@ -27,14 +29,19 @@ class AnswerRequest(BaseModel):
 def start_interview(request: StartInterviewRequest, db: Session = Depends(get_db)):
     """Start a new AI interview session."""
     resume_summary = "General Engineering experience."
+    target_role = request.target_role
+
     if request.resume_id:
         resume = db.query(Resume).filter(Resume.id == request.resume_id).first()
         if resume and resume.raw_text:
             resume_summary = resume.raw_text[:1000]
+            # Auto-detect domain if default role
+            if not target_role or target_role == "General Engineering":
+                target_role = ai_service.auto_detect_domain(resume.raw_text)
 
     mode_name = (request.interview_type or "technical").upper()
-    questions = gemini_service.generate_interview_questions(
-        target_role=request.target_role,
+    questions = ai_service.generate_interview_questions(
+        target_role=target_role,
         resume_summary=resume_summary,
         interview_type=request.interview_type or "technical",
         num_questions=5,
@@ -242,4 +249,11 @@ def get_interview(interview_id: int, db: Session = Depends(get_db)):
         "transcript": interview.transcript,
         "started_at": interview.started_at.isoformat() if interview.started_at else None,
     }
+
+
+@router.get("/simli-session")
+def get_simli_session(gender: str = "female"):
+    """Get active Simli WebRTC session for real-time lip-synced video avatar."""
+    return simli_service.create_session(gender)
+
 

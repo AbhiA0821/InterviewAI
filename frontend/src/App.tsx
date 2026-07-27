@@ -10,16 +10,22 @@ import LoginPage from "./pages/LoginPage";
 import { authService } from "./services/authService";
 import { Loader2 } from "lucide-react";
 
-// RequireAuth component: Enforces Google Authentication BEFORE accessing the app
+import MirrorRoomPage from "./pages/MirrorRoomPage";
+
+// RequireAuth component: Enforces Google Authentication Page FIRST on app start
 function RequireAuth({ children }: { children: JSX.Element }) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
   useEffect(() => {
+    const sessionAuth = sessionStorage.getItem("google_authenticated");
     const token = localStorage.getItem("interviewai_token");
-    if (!token) {
+
+    // Force Google Authentication screen on fresh session launch
+    if (!sessionAuth || !token) {
       setIsAuthenticated(false);
       return;
     }
+
     authService
       .getCurrentUser()
       .then((user) => {
@@ -34,7 +40,7 @@ function RequireAuth({ children }: { children: JSX.Element }) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-3">
         <Loader2 className="h-10 w-10 text-indigo-500 animate-spin" />
-        <p className="text-sm font-medium text-muted-foreground">Checking Google Authentication...</p>
+        <p className="text-sm font-medium text-muted-foreground">Checking Google Authentication Guard...</p>
       </div>
     );
   }
@@ -71,6 +77,22 @@ function App() {
               }
             />
             <Route
+              path="/mirror_room/:id"
+              element={
+                <RequireAuth>
+                  <MirrorRoomPage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/mirror_room"
+              element={
+                <RequireAuth>
+                  <MirrorRoomPage />
+                </RequireAuth>
+              }
+            />
+            <Route
               path="/interview/:id"
               element={
                 <RequireAuth>
@@ -94,7 +116,7 @@ function App() {
                 </RequireAuth>
               }
             />
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </main>
       </div>

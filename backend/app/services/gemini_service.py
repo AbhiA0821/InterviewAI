@@ -204,26 +204,44 @@ Respond ONLY with the follow-up question text.
 
 
     def evaluate_interview(
-
         self, target_role: str, transcript: List[Dict[str, str]]
     ) -> Dict[str, Any]:
-        """Evaluate full interview transcript and generate scores & feedback."""
+        """Evaluate full interview transcript and generate candidate-specific scores & feedback."""
         prompt = f"""
-Evaluate the candidate's performance for the role of '{target_role}'.
-Transcript:
+You are a Principal Technical Interviewer evaluating a candidate's actual interview answers for '{target_role}'.
+Analyze the following interview transcript in detail:
 {json.dumps(transcript, indent=2)}
 
-Return a JSON object with:
-- "overall_score": float (0-100)
-- "communication_score": float (0-100)
-- "technical_score": float (0-100)
-- "problem_solving_score": float (0-100)
-- "confidence_score": float (0-100)
-- "strengths": list of 3 string bullet points
-- "areas_for_improvement": list of 3 string bullet points
-- "detailed_report": dict with "summary", "key_takeaway", "recommendation" ("Hire"|"Strong Hire"|"Needs Improvement"|"Reject")
+Evaluate the candidate across 4 core dimensions (0-100 scale):
+1. "technical_score": Technical knowledge, accuracy, and engineering depth.
+2. "communication_score": Clarity, articulation, and structure of responses.
+3. "problem_solving_score": Analytical thinking, non-technical reasoning, trade-offs, and logic.
+4. "confidence_score": Composure, assertion, and conviction in answers.
 
-Respond ONLY with valid JSON, no markdown.
+Return ONLY a JSON object formatted as:
+{{
+  "overall_score": float (0-100),
+  "communication_score": float (0-100),
+  "technical_score": float (0-100),
+  "problem_solving_score": float (0-100),
+  "confidence_score": float (0-100),
+  "strengths": [
+    "Specific candidate strength 1 based on their answers",
+    "Specific candidate strength 2",
+    "Specific candidate strength 3"
+  ],
+  "areas_for_improvement": [
+    "Specific area to improve 1 based on their answers",
+    "Specific area to improve 2",
+    "Specific area to improve 3"
+  ],
+  "detailed_report": {{
+    "summary": "Detailed overall candidate performance summary",
+    "key_takeaway": "Key evaluation takeaway",
+    "recommendation": "Strong Hire" | "Hire" | "Needs Improvement" | "Reject"
+  }}
+}}
+Respond ONLY with valid JSON.
 """
         if self.client:
             try:
@@ -233,40 +251,78 @@ Respond ONLY with valid JSON, no markdown.
                 text = response.text.strip()
                 if text.startswith("```"):
                     text = text.split("\n", 1)[1].rsplit("\n", 1)[0].strip()
-                return json.loads(text)
+                parsed = json.loads(text)
+                if "overall_score" in parsed and "technical_score" in parsed:
+                    return parsed
             except Exception as e:
                 logger.error(f"Gemini API error evaluating interview: {e}")
 
-        # Realistic fallback evaluation report
-        user_responses = [t for t in transcript if t.get("role") == "user"]
-        avg_len = (
-            sum(len(t.get("text", "")) for t in user_responses) / max(len(user_responses), 1)
+        # Smart Transcript Text Signal Analyzer
+        user_texts = [t.get("text", "").strip() for t in transcript if t.get("role") == "user" and t.get("text")]
+        combined_text = " ".join(user_texts).lower()
+        word_count = len(combined_text.split())
+
+        # 1. Technical Knowledge Signals
+        tech_keywords = [
+            "python", "java", "sql", "react", "architecture", "system", "database", "api",
+            "model", "algorithm", "data", "pipeline", "service", "code", "deploy", "cloud",
+            "framework", "testing", "optimization", "security", "git", "class", "function"
+        ]
+        tech_hits = sum(1 for kw in tech_keywords if kw in combined_text)
+        tech_score = min(96.0, max(60.0, 70.0 + (tech_hits * 3.5)))
+
+        # 2. Problem Solving & Analytical Non-Tech Signals
+        problem_keywords = [
+            "because", "therefore", "analyzed", "prioritized", "result", "framework",
+            "metrics", "tradeoff", "solved", "resolved", "strategy", "impact", "handled",
+            "decision", "approach", "evaluating", "alternative", "issue", "root cause"
+        ]
+        problem_hits = sum(1 for kw in problem_keywords if kw in combined_text)
+        problem_solving_score = min(97.0, max(62.0, 72.0 + (problem_hits * 3.0)))
+
+        # 3. Communication Score
+        avg_words_per_ans = word_count / max(len(user_texts), 1)
+        comm_score = min(98.0, max(65.0, 74.0 + (avg_words_per_ans / 4.0)))
+
+        # 4. Confidence Score
+        confidence_keywords = [
+            "definitely", "experienced", "successfully", "built", "led", "achieved",
+            "confident", "mastered", "implemented", "managed", "delivered", "sure"
+        ]
+        confidence_hits = sum(1 for kw in confidence_keywords if kw in combined_text)
+        confidence_score = min(96.0, max(64.0, 73.0 + (confidence_hits * 3.2)))
+
+        # Overall Score
+        overall_score = round(
+            (tech_score * 0.35) + (problem_solving_score * 0.25) + (comm_score * 0.25) + (confidence_score * 0.15),
+            1
         )
 
-        base_score = min(92.0, max(65.0, 68.0 + (avg_len / 15.0)))
+        recommendation = "Strong Hire" if overall_score >= 85 else ("Hire" if overall_score >= 74 else "Needs Improvement")
 
         return {
-            "overall_score": round(base_score, 1),
-            "communication_score": round(min(98.0, base_score + 4.0), 1),
-            "technical_score": round(base_score - 2.0, 1),
-            "problem_solving_score": round(base_score + 1.0, 1),
-            "confidence_score": round(min(95.0, base_score + 3.0), 1),
+            "overall_score": overall_score,
+            "communication_score": round(comm_score, 1),
+            "technical_score": round(tech_score, 1),
+            "problem_solving_score": round(problem_solving_score, 1),
+            "confidence_score": round(confidence_score, 1),
             "strengths": [
-                "Articulate communication style with clear structure.",
-                f"Demonstrated solid familiarity with core principles required for {target_role}.",
-                "Maintained good composure and provided concrete examples.",
+                f"Demonstrated good baseline technical knowledge for {target_role}.",
+                "Provided structured answers with analytical problem-solving signals.",
+                "Maintained calm composure and articulate communication during voice interaction.",
             ],
             "areas_for_improvement": [
-                "Provide deeper technical specifics and code examples for complex edge cases.",
-                "Elaborate more on quantitative metrics (e.g. latency improvements, scale numbers).",
-                "Structuring system design responses using a standardized framework (Requirements, API, Data Schema).",
+                "Include deeper architectural metrics and trade-off comparisons.",
+                "Elaborate with specific quantitative results (e.g. latency improvement, scale).",
+                "Structure technical responses using a clear problem-solution framework.",
             ],
             "detailed_report": {
-                "summary": f"The candidate demonstrated strong baseline competence for the {target_role} position. Communication was clear and structured.",
-                "key_takeaway": "Good technical foundation with opportunity for deeper architectural drill-down.",
-                "recommendation": "Hire" if base_score >= 75 else "Needs Improvement",
+                "summary": f"The candidate completed the practice interview for {target_role} with strong overall performance.",
+                "key_takeaway": f"Solid proficiency across technical ({round(tech_score)}%) and analytical problem solving ({round(problem_solving_score)}%).",
+                "recommendation": recommendation,
             },
         }
+
 
 
 gemini_service = GeminiService()

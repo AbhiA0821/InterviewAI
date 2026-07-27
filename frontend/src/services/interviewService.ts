@@ -73,4 +73,10 @@ export const interviewService = {
     const response = await apiClient.get("/api/interview/history");
     return response.data;
   },
+
+  getSimliSession: async (gender: string = "female") => {
+    const response = await apiClient.get(`/api/interview/simli-session?gender=${gender}`);
+    return response.data;
+  },
 };
+

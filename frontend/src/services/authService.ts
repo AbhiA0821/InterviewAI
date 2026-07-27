@@ -30,4 +30,10 @@ export const authService = {
     const response = await apiClient.get("/api/auth/me", { headers });
     return response.data;
   },
+
+  logout: () => {
+    localStorage.removeItem("interviewai_token");
+    delete apiClient.defaults.headers.common["Authorization"];
+  },
 };
+

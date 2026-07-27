@@ -1,8 +1,22 @@
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { interviewService, StartInterviewResponse } from "../services/interviewService";
 import { InterviewerAvatar } from "../components/interview/InterviewerAvatar";
-import { Bot, Camera, CameraOff, CheckCircle, Clock, HelpCircle, Loader2, Mic, MicOff, Send, User, Volume2, VolumeX } from "lucide-react";
+import {
+  Camera,
+  CameraOff,
+  ChevronUp,
+  ChevronDown,
+  Loader2,
+  Mic,
+  MicOff,
+  PhoneOff,
+  Send,
+  Sparkles,
+  Subtitles,
+  Volume2,
+  Wifi,
+} from "lucide-react";
 
 export default function LiveInterviewPage() {
   const { id } = useParams<{ id: string }>();
@@ -14,87 +28,115 @@ export default function LiveInterviewPage() {
     (localStorage.getItem("selected_gender") as "female" | "male") ||
     "female";
 
+  const durationParam =
+    searchParams.get("duration") ||
+    localStorage.getItem("selected_duration") ||
+    "15 mins";
+
+  const getSecondsFromDuration = (dur: string) => {
+    if (dur.includes("5")) return 300;
+    if (dur.includes("10")) return 600;
+    if (dur.includes("20")) return 1200;
+    return 900;
+  };
+
   const [interview, setInterview] = useState<StartInterviewResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [voiceTranscript, setVoiceTranscript] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [speechEnabled, setSpeechEnabled] = useState(true);
-  const [cameraEnabled, setCameraEnabled] = useState(true);
   const [interviewerGender, setInterviewerGender] = useState<"female" | "male">(initialGender);
-
 
   const [avatarStatus, setAvatarStatus] = useState<"speaking" | "listening" | "thinking" | "idle">("idle");
   const [speakingBoundaryTick, setSpeakingBoundaryTick] = useState(0);
-  const [timerSeconds, setTimerSeconds] = useState(0);
+  const [timerSeconds, setTimerSeconds] = useState<number>(getSecondsFromDuration(durationParam));
   const [error, setError] = useState("");
+
+  // Controls for Mocklingo Floating UI
+  const [cameraActive, setCameraActive] = useState(true);
+  const [micActive, setMicActive] = useState(true);
+  const [showTranscriptDrawer, setShowTranscriptDrawer] = useState(false);
 
   const transcriptEndRef = useRef<HTMLDivElement | null>(null);
   const recognitionRef = useRef<any>(null);
   const userVideoRef = useRef<HTMLVideoElement | null>(null);
+  const userMediaStreamRef = useRef<MediaStream | null>(null);
+  const shouldKeepListeningRef = useRef<boolean>(false);
+
+  // Pre-load speech synthesis voices
+  useEffect(() => {
+    const updateVoices = () => {
+      if (window.speechSynthesis) {
+        window.speechSynthesis.getVoices();
+      }
+    };
+    updateVoices();
+    if (window.speechSynthesis) {
+      window.speechSynthesis.onvoiceschanged = updateVoices;
+    }
+  }, []);
 
   useEffect(() => {
     if (!id) return;
     fetchSession();
   }, [id]);
 
+  // Session Countdown Timer
   useEffect(() => {
     const interval = setInterval(() => {
-      setTimerSeconds((prev) => prev + 1);
+      setTimerSeconds((prev) => (prev > 0 ? prev - 1 : 0));
     }, 1000);
     return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
     transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [interview?.transcript]);
+  }, [interview?.transcript, voiceTranscript]);
 
-  // Real-time Candidate Webcam Stream (Android & Desktop Compatible)
+  // Candidate Camera Setup for Floating Picture-in-Picture
   useEffect(() => {
-    let stream: MediaStream | null = null;
     async function startCamera() {
       try {
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" },
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: { width: 640, height: 480, facingMode: "user" },
             audio: false,
           });
+          userMediaStreamRef.current = stream;
           if (userVideoRef.current) {
             userVideoRef.current.srcObject = stream;
           }
         }
-      } catch (err) {
-        console.warn("Camera stream not available or denied:", err);
+      } catch (e) {
+        console.warn("Live candidate camera stream unavailable:", e);
+        setCameraActive(false);
       }
     }
-    if (cameraEnabled) {
-      startCamera();
-    } else {
-      if (userVideoRef.current && userVideoRef.current.srcObject) {
-        const tracks = (userVideoRef.current.srcObject as MediaStream).getTracks();
-        tracks.forEach((t) => t.stop());
-        userVideoRef.current.srcObject = null;
-      }
-    }
+    startCamera();
     return () => {
-      if (stream) {
-        stream.getTracks().forEach((t) => t.stop());
+      if (userMediaStreamRef.current) {
+        userMediaStreamRef.current.getTracks().forEach((t) => t.stop());
       }
     };
-  }, [cameraEnabled]);
+  }, []);
 
-  // Speech recognition for voice chat
+  // Continuous Speech Recognition
   const startAutoVoiceListening = () => {
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) return;
 
+    shouldKeepListeningRef.current = true;
+
     try {
       if (recognitionRef.current) {
-        recognitionRef.current.stop();
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {}
       }
+
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
@@ -102,19 +144,24 @@ export default function LiveInterviewPage() {
 
       recognition.onresult = (event: any) => {
         let transcript = "";
-        for (let i = event.resultIndex; i < event.results.length; i++) {
+        for (let i = 0; i < event.results.length; i++) {
           transcript += event.results[i][0].transcript;
         }
-        setVoiceTranscript((prev) => (prev ? prev + " " + transcript : transcript));
-      };
-
-      recognition.onerror = () => {
-        setIsRecording(false);
-        setAvatarStatus("idle");
+        if (transcript.trim()) {
+          setVoiceTranscript(transcript.trim());
+        }
       };
 
       recognition.onend = () => {
-        setIsRecording(false);
+        if (shouldKeepListeningRef.current && micActive) {
+          try {
+            recognition.start();
+          } catch (e) {
+            setIsRecording(false);
+          }
+        } else {
+          setIsRecording(false);
+        }
       };
 
       recognition.start();
@@ -126,56 +173,55 @@ export default function LiveInterviewPage() {
     }
   };
 
-  // Speak questions using Web Speech Synthesis with crystal clear female/male voice matching
+  // Speak question with high quality TTS
   const speakText = (text: string) => {
-    if (!speechEnabled || !("speechSynthesis" in window)) {
+    if (!("speechSynthesis" in window)) {
       startAutoVoiceListening();
       return;
     }
     window.speechSynthesis.cancel();
 
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1.0;
-    utterance.pitch = interviewerGender === "female" ? 1.25 : 0.95;
-    utterance.volume = 1.0;
-
     const voices = window.speechSynthesis.getVoices();
-    let targetVoice = null;
+    if (!voices || voices.length === 0) {
+      window.speechSynthesis.onvoiceschanged = () => {
+        speakText(text);
+      };
+      return;
+    }
 
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.95;
+    utterance.volume = 1.0;
+    utterance.lang = "en-IN";
+
+    const indianVoices = voices.filter(
+      (v) =>
+        v.lang.includes("IN") ||
+        v.name.toLowerCase().includes("india") ||
+        v.name.toLowerCase().includes("hindi") ||
+        v.name.toLowerCase().includes("heera") ||
+        v.name.toLowerCase().includes("ravi") ||
+        v.name.toLowerCase().includes("veena")
+    );
+
+    let targetVoice = null;
     if (interviewerGender === "female") {
+      utterance.pitch = 1.6;
       targetVoice =
-        voices.find((v) => {
-          const name = v.name.toLowerCase();
-          return (
-            name.includes("female") ||
-            name.includes("zira") ||
-            name.includes("priya") ||
-            name.includes("heera") ||
-            name.includes("veena") ||
-            name.includes("samantha") ||
-            name.includes("karen") ||
-            name.includes("victoria") ||
-            name.includes("hazel") ||
-            name.includes("catherine")
-          );
+        indianVoices.find((v) => {
+          const n = v.name.toLowerCase();
+          return n.includes("heera") || n.includes("veena") || n.includes("female") || n.includes("zira");
         }) ||
-        voices.find((v) => !v.name.toLowerCase().includes("david") && !v.name.toLowerCase().includes("mark"));
+        (indianVoices.length > 0 ? indianVoices[0] : null) ||
+        voices.find((v) => !v.name.toLowerCase().includes("david") && !v.name.toLowerCase().includes("mark")) ||
+        (voices.length > 1 ? voices[1] : voices[0]);
     } else {
+      utterance.pitch = 0.8;
       targetVoice =
-        voices.find((v) => {
-          const name = v.name.toLowerCase();
-          return (
-            name.includes("male") ||
-            name.includes("david") ||
-            name.includes("mark") ||
-            name.includes("rohan") ||
-            name.includes("rishi") ||
-            name.includes("george") ||
-            name.includes("alex") ||
-            name.includes("james")
-          );
-        }) ||
-        voices.find((v) => !v.name.toLowerCase().includes("zira"));
+        indianVoices.find((v) => v.name.toLowerCase().includes("ravi")) ||
+        (indianVoices.length > 0 ? indianVoices[0] : null) ||
+        voices.find((v) => v.name.toLowerCase().includes("david")) ||
+        voices[0];
     }
 
     if (targetVoice) {
@@ -192,17 +238,16 @@ export default function LiveInterviewPage() {
 
     utterance.onend = () => {
       setAvatarStatus("listening");
-      startAutoVoiceListening();
+      if (micActive) startAutoVoiceListening();
     };
 
     utterance.onerror = () => {
       setAvatarStatus("idle");
-      startAutoVoiceListening();
+      if (micActive) startAutoVoiceListening();
     };
 
     window.speechSynthesis.speak(utterance);
   };
-
 
   const fetchSession = async () => {
     try {
@@ -224,8 +269,11 @@ export default function LiveInterviewPage() {
 
   const handleSendVoiceAnswer = async () => {
     if (!voiceTranscript.trim() || submitting || !interview) return;
+    shouldKeepListeningRef.current = false;
     if (recognitionRef.current) {
-      recognitionRef.current.stop();
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {}
     }
     setIsRecording(false);
     setSubmitting(true);
@@ -252,7 +300,7 @@ export default function LiveInterviewPage() {
         handleFinishInterview();
       }
     } catch (err: any) {
-      setError("Failed to send voice answer.");
+      setError("Failed to send answer.");
       setAvatarStatus("idle");
     } finally {
       setSubmitting(false);
@@ -262,339 +310,319 @@ export default function LiveInterviewPage() {
   const handleFinishInterview = async () => {
     if (!interview || finishing) return;
     setFinishing(true);
+    shouldKeepListeningRef.current = false;
     window.speechSynthesis?.cancel();
     if (recognitionRef.current) {
-      recognitionRef.current.stop();
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {}
     }
     try {
       await interviewService.finishInterview(interview.interview_id);
-    } catch (err: any) {
-      console.warn("Finish interview handled:", err);
+    } catch (e) {
+      console.warn("Finish interview handled:", e);
     } finally {
       navigate(`/feedback/${interview.interview_id}`);
-    }
-  };
-
-
-  const toggleRecording = () => {
-    if (isRecording) {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
-      setIsRecording(false);
-      setAvatarStatus("idle");
-    } else {
-      startAutoVoiceListening();
     }
   };
 
   const formatTimer = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   if (loading) {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-4">
-        <Loader2 className="h-10 w-10 text-indigo-500 animate-spin" />
-        <p className="text-muted-foreground font-medium">Entering Face-to-Face AI Interview Room...</p>
+      <div className="min-h-screen flex flex-col items-center justify-center space-y-4 bg-slate-950 text-white">
+        <Loader2 className="h-12 w-12 text-emerald-400 animate-spin" />
+        <p className="text-slate-300 font-extrabold tracking-wide text-sm">
+          Connecting to Mocklingo AI Interview Deck...
+        </p>
       </div>
     );
   }
 
   if (!interview) {
     return (
-      <div className="text-center py-12 space-y-4">
-        <p className="text-destructive font-semibold">Interview session not found.</p>
-        <button onClick={() => navigate("/upload")} className="text-indigo-400 underline">
+      <div className="min-h-screen flex flex-col items-center justify-center py-12 space-y-4 bg-slate-950 text-white">
+        <p className="text-red-400 font-bold">Interview session not found.</p>
+        <button onClick={() => navigate("/upload")} className="text-emerald-400 underline font-semibold">
           Start New Practice Session
         </button>
       </div>
     );
   }
 
-  const currentQNum = interview.current_question_index + 1;
-  const totalQNum = interview.questions?.length || 5;
-  const interviewerName =
-    interviewerGender === "female" ? "Priya (AI Tech Lead)" : "Rohan (AI Principal Engineer)";
+  const interviewerName = interviewerGender === "male" ? "Abhii (AI Lead)" : "Riya (AI Tech Lead)";
 
   const lastInterviewerMsg = interview.transcript
     ? [...interview.transcript].reverse().find((m) => m.role === "interviewer")
     : null;
   const activeQuestionText =
     interview.questions?.[interview.current_question_index]?.question ||
-    (lastInterviewerMsg ? lastInterviewerMsg.text : "");
-
-
+    (lastInterviewerMsg ? lastInterviewerMsg.text : "Introduce yourself briefly");
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 pb-12 px-2 sm:px-4">
-      {/* Header & Status Bar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-2xl border border-border/80 bg-card p-4 sm:p-5 shadow-sm">
+    <div className="min-h-screen bg-slate-950 text-white flex flex-col justify-between p-3 sm:p-6 relative overflow-hidden font-sans selection:bg-emerald-500/30">
+      {/* MOCKLINGO TOP HEADER BAR */}
+      <div className="flex items-center justify-between px-3 py-2 bg-slate-900/90 border border-slate-800 rounded-2xl backdrop-blur shadow-xl z-30">
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/20">
-            <Bot className="h-6 w-6" />
+          <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 font-black text-lg shadow-md">
+            M
           </div>
           <div>
-            <h1 className="font-bold text-lg sm:text-xl text-foreground">
-              {interview.target_role} (Live Face-to-Face Video Call)
+            <h1 className="text-sm sm:text-base font-black tracking-wider text-white flex items-center gap-2">
+              <span>{interview.target_role}</span>
+              <span className="hidden sm:inline-block text-[10px] font-bold text-emerald-400 bg-emerald-950/90 px-2.5 py-0.5 rounded-full border border-emerald-500/40">
+                Mocklingo AI Stage
+              </span>
             </h1>
-            <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-              <span className="font-medium text-indigo-400">
-                Question {currentQNum} of {totalQNum}
-              </span>
-              <span>•</span>
-              <span className="flex items-center gap-1">
-                <Clock className="h-3.5 w-3.5" />
-                {formatTimer(timerSeconds)}
-              </span>
-            </div>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
-          <button
-            onClick={() => {
-              if (activeQuestionText) {
-                speakText(activeQuestionText);
-              }
-            }}
-            className="flex items-center gap-1.5 rounded-lg border border-indigo-500/40 bg-indigo-500/10 px-3 py-2 text-xs font-semibold text-indigo-300 hover:bg-indigo-500/20"
-          >
-            <Volume2 className="h-4 w-4 text-indigo-400" />
-            <span>Replay Voice</span>
-          </button>
+        {/* Center Countdown Timer */}
+        <div className="rounded-full border border-slate-800 bg-slate-950/90 px-4 py-1.5 text-xs font-mono font-bold text-emerald-400 flex items-center gap-2 shadow-inner">
+          <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span>{formatTimer(timerSeconds)} Mins</span>
+        </div>
 
+        {/* Top Right Controls & Mirror Check */}
+        <div className="flex items-center gap-2">
           <button
-            onClick={() => setCameraEnabled(!cameraEnabled)}
-            className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
-              cameraEnabled
-                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
-                : "border-border text-muted-foreground hover:bg-accent"
-            }`}
+            type="button"
+            onClick={() => navigate(`/mirror_room/${interview.interview_id}`)}
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300 hover:text-white text-xs font-bold transition-all shadow-sm"
           >
-            {cameraEnabled ? <Camera className="h-4 w-4 text-emerald-400" /> : <CameraOff className="h-4 w-4" />}
-            <span>{cameraEnabled ? "Camera On" : "Camera Off"}</span>
+            <span>🪞 Device Check</span>
           </button>
-
-          <button
-            onClick={() => {
-              setSpeechEnabled(!speechEnabled);
-              window.speechSynthesis?.cancel();
-            }}
-            className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
-          >
-            {speechEnabled ? (
-              <>
-                <Volume2 className="h-4 w-4 text-indigo-400" />
-                <span>Audio On</span>
-              </>
-            ) : (
-              <>
-                <VolumeX className="h-4 w-4 text-muted-foreground" />
-                <span>Muted</span>
-              </>
-            )}
-          </button>
-
-          <button
-            onClick={handleFinishInterview}
-            disabled={finishing}
-            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition-all hover:opacity-90 disabled:opacity-50"
-          >
-            {finishing ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Scorecard...</span>
-              </>
-            ) : (
-              <>
-                <CheckCircle className="h-4 w-4" />
-                <span>Finish</span>
-              </>
-            )}
-          </button>
+          <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-400 bg-emerald-950/80 px-3 py-1.5 rounded-full border border-emerald-500/40">
+            <Wifi className="h-3 w-3" />
+            <span>Connected</span>
+          </span>
         </div>
       </div>
 
+      {/* Error Banner */}
       {error && (
-        <div className="rounded-xl border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive font-medium">
+        <div className="rounded-xl border border-red-500/50 bg-red-950/80 p-3 text-xs text-red-300 font-bold text-center z-30">
           {error}
         </div>
       )}
 
-      {/* Prominent Active Question Banner Overlay on top of Video Call Deck */}
-      <div className="rounded-3xl border border-indigo-500/40 bg-gradient-to-r from-indigo-950/60 via-card to-violet-950/50 p-5 md:p-6 shadow-xl space-y-2">
-        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-indigo-400">
-          <HelpCircle className="h-4 w-4 text-indigo-400" />
-          <span>Current Active Question ({currentQNum}/{totalQNum})</span>
-        </div>
-        <p className="text-base md:text-lg font-extrabold text-foreground leading-snug">
-          {activeQuestionText}
-        </p>
-      </div>
-
-      {/* Face-to-Face Dual 16:9 Widescreen Video Deck (AI Avatar & Candidate Camera Side-by-Side) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Left Video Deck: AI Interviewer 16:9 Widescreen Video Frame */}
-        <InterviewerAvatar
-          gender={interviewerGender}
-          onGenderChange={(g) => {
-            setInterviewerGender(g);
-            window.speechSynthesis?.cancel();
-          }}
-          status={avatarStatus}
-          interviewerName={interviewerName}
-          speakingBoundaryTick={speakingBoundaryTick}
-        />
-
-        {/* Right Video Deck: Candidate Live Webcam 16:9 Widescreen Video Frame */}
-        <div className="relative overflow-hidden rounded-3xl border border-indigo-500/30 bg-gradient-to-b from-indigo-950/60 via-card to-card p-6 shadow-2xl flex flex-col justify-between space-y-4">
-          <div className="flex items-center justify-between z-10">
-            <span className="flex items-center gap-2 text-sm font-bold text-foreground">
-              <span className="h-3 w-3 rounded-full bg-emerald-500 animate-pulse" />
-              <span>You (Candidate Live Stream)</span>
-            </span>
-            <button
-              onClick={() => setCameraEnabled(!cameraEnabled)}
-              className="text-xs text-indigo-300 font-semibold hover:underline"
-            >
-              {cameraEnabled ? "Turn Off Camera" : "Turn On Camera"}
-            </button>
+      {/* MOCKLINGO MAIN AI STAGE WITH FLOATING CANDIDATE PIP */}
+      <div className="relative flex-1 my-4 w-full rounded-3xl overflow-hidden bg-slate-900 border border-slate-800 shadow-2xl flex flex-col justify-between">
+        {/* Floating Top Translucent Active Question Banner */}
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 w-[92%] sm:w-[80%] max-w-3xl rounded-2xl bg-black/85 border border-slate-700/80 p-3 sm:p-4 text-xs sm:text-sm font-bold text-white shadow-2xl backdrop-blur flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 overflow-hidden">
+            <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-ping shrink-0" />
+            <p className="truncate text-slate-100">{activeQuestionText}</p>
           </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (activeQuestionText) speakText(activeQuestionText);
+            }}
+            className="shrink-0 flex items-center gap-1.5 text-xs font-extrabold text-emerald-400 bg-emerald-950/90 hover:bg-emerald-900 px-3 py-1.5 rounded-full border border-emerald-500/50 shadow-sm transition-all"
+          >
+            <Volume2 className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Replay</span>
+          </button>
+        </div>
 
-          <div className="relative h-56 md:h-64 w-full rounded-2xl overflow-hidden bg-black/90 flex items-center justify-center border border-indigo-500/30 shadow-inner">
-            {cameraEnabled ? (
-              <video
-                ref={userVideoRef}
-                autoPlay
-                playsInline
-                muted
-                className="h-full w-full object-cover transform -scale-x-100"
-              />
+        {/* Main Stage: Photorealistic AI Interviewer Avatar */}
+        <div className="relative flex-1 w-full h-full">
+          <InterviewerAvatar
+            gender={interviewerGender}
+            onGenderChange={(g) => {
+              setInterviewerGender(g);
+              localStorage.setItem("selected_gender", g);
+              window.speechSynthesis?.cancel();
+            }}
+            status={avatarStatus}
+            interviewerName={interviewerName}
+            speakingBoundaryTick={speakingBoundaryTick}
+          />
+        </div>
+
+        {/* Floating Candidate Picture-in-Picture (PiP) Webcam Box */}
+        <div className="absolute top-16 right-4 sm:top-20 sm:right-6 z-20 h-32 w-44 sm:h-44 sm:w-60 rounded-2xl overflow-hidden border-2 border-slate-700/90 bg-slate-950 shadow-2xl transition-all group hover:scale-105 hover:border-emerald-400">
+          {cameraActive ? (
+            <video
+              ref={userVideoRef}
+              autoPlay
+              playsInline
+              muted
+              className="h-full w-full object-cover transform -scale-x-100"
+            />
+          ) : (
+            <div className="h-full w-full flex flex-col items-center justify-center bg-slate-950 text-slate-500 space-y-1">
+              <CameraOff className="h-8 w-8 text-red-400" />
+              <span className="text-[10px] font-bold">Camera OFF</span>
+            </div>
+          )}
+
+          {/* Floating Candidate Name & Mic Badge */}
+          <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-[10px] font-extrabold text-white bg-black/80 px-2.5 py-1 rounded-full border border-slate-800 backdrop-blur">
+            <span className="truncate">You (Candidate)</span>
+            {micActive ? (
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
             ) : (
-              <div className="flex flex-col items-center justify-center space-y-2 text-muted-foreground">
-                <CameraOff className="h-10 w-10 opacity-60" />
-                <span className="text-xs font-semibold">Camera Stream Paused</span>
-              </div>
+              <MicOff className="h-3 w-3 text-red-400" />
             )}
           </div>
+        </div>
 
-          <div className="text-center text-xs text-muted-foreground font-medium pt-0.5">
-            <span>Facing AI Interviewer • Real-time Voice Chat</span>
+        {/* Live Answer Voice Transcript Input Overlay Box */}
+        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-20 w-[92%] sm:w-[80%] max-w-3xl rounded-2xl bg-black/90 border border-slate-800 p-3 shadow-2xl backdrop-blur space-y-2">
+          <div className="flex items-center justify-between text-[11px] font-extrabold text-slate-400">
+            <span className="flex items-center gap-1.5 text-emerald-400">
+              <Sparkles className="h-3.5 w-3.5" /> Live Voice Transcription
+            </span>
+            <span>{isRecording ? "🎤 Voice Recording..." : "Ready to speak"}</span>
           </div>
+
+          <textarea
+            rows={2}
+            value={voiceTranscript}
+            onChange={(e) => setVoiceTranscript(e.target.value)}
+            placeholder="Speak aloud or type your response here... (Voice auto-transcribes live)"
+            className="w-full rounded-xl border border-slate-800 bg-slate-900/90 p-2.5 text-xs sm:text-sm text-white focus:outline-none focus:ring-1 focus:ring-emerald-400 resize-none font-medium"
+          />
         </div>
       </div>
 
-      {/* Transcript & Voice Input Controls */}
-      <div className="rounded-3xl border border-border/80 bg-card p-5 sm:p-8 shadow-md space-y-6">
-        <h2 className="font-bold text-lg text-foreground border-b border-border/60 pb-3">
-          Interview Conversation Transcript
-        </h2>
+      {/* MOCKLINGO FLOATING BOTTOM CALL CONTROL DOCK BAR */}
+      <div className="relative z-30 flex items-center justify-center gap-3 sm:gap-4 py-2">
+        <div className="flex items-center gap-2 sm:gap-3 bg-slate-900/95 border border-slate-800/90 p-2 rounded-full shadow-2xl backdrop-blur">
+          {/* Mic Toggle Button */}
+          <button
+            type="button"
+            onClick={() => {
+              setMicActive(!micActive);
+              if (isRecording) {
+                shouldKeepListeningRef.current = false;
+                try {
+                  recognitionRef.current?.stop();
+                } catch (e) {}
+                setIsRecording(false);
+              } else {
+                startAutoVoiceListening();
+              }
+            }}
+            className={`p-3.5 rounded-full font-extrabold transition-all shadow-md ${
+              isRecording || avatarStatus === "speaking"
+                ? "bg-emerald-500 text-white shadow-emerald-500/30 ring-2 ring-emerald-400 animate-pulse"
+                : micActive
+                ? "bg-slate-800 text-slate-200 hover:bg-slate-700"
+                : "bg-red-950 text-red-400 border border-red-800"
+            }`}
+            title="Toggle Mic / Speaking"
+          >
+            {micActive ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
+          </button>
 
-        <div className="space-y-4 overflow-y-auto max-h-[300px] pr-2">
-          {interview.transcript?.map((item, idx) => (
-            <div
-              key={idx}
-              className={`flex items-start gap-3.5 ${
-                item.role === "user" ? "flex-row-reverse" : "flex-row"
-              }`}
-            >
-              <div
-                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl font-bold text-sm text-white ${
-                  item.role === "user"
-                    ? "bg-purple-600"
-                    : "bg-gradient-to-tr from-indigo-600 to-violet-600"
-                }`}
-              >
-                {item.role === "user" ? <User className="h-5 w-5" /> : <Bot className="h-5 w-5" />}
-              </div>
+          {/* Camera Toggle Button */}
+          <button
+            type="button"
+            onClick={() => {
+              if (userMediaStreamRef.current) {
+                const videoTrack = userMediaStreamRef.current.getVideoTracks()[0];
+                if (videoTrack) {
+                  videoTrack.enabled = !videoTrack.enabled;
+                  setCameraActive(videoTrack.enabled);
+                }
+              }
+            }}
+            className={`p-3.5 rounded-full font-extrabold transition-all shadow-md ${
+              cameraActive
+                ? "bg-slate-800 text-slate-200 hover:bg-slate-700"
+                : "bg-red-950 text-red-400 border border-red-800"
+            }`}
+            title="Toggle Camera"
+          >
+            {cameraActive ? <Camera className="h-5 w-5" /> : <CameraOff className="h-5 w-5" />}
+          </button>
 
-              <div
-                className={`max-w-[85%] rounded-2xl p-4 text-sm leading-relaxed ${
-                  item.role === "user"
-                    ? "bg-purple-600/15 border border-purple-500/20 text-foreground rounded-tr-none"
-                    : "bg-indigo-500/10 border border-indigo-500/20 text-foreground rounded-tl-none"
-                }`}
-              >
-                <div className="font-semibold text-xs mb-1 text-muted-foreground">
-                  {item.role === "user" ? "You (Candidate)" : interviewerName}
-                </div>
-                <p>{item.text}</p>
-              </div>
-            </div>
-          ))}
-          <div ref={transcriptEndRef} />
-        </div>
+          {/* Subtitles / Transcript Toggle Button */}
+          <button
+            type="button"
+            onClick={() => setShowTranscriptDrawer(!showTranscriptDrawer)}
+            className={`p-3.5 rounded-full font-extrabold transition-all shadow-md ${
+              showTranscriptDrawer
+                ? "bg-emerald-500 text-white"
+                : "bg-slate-800 text-slate-200 hover:bg-slate-700"
+            }`}
+            title="Subtitles & Live Transcript Log"
+          >
+            <Subtitles className="h-5 w-5" />
+          </button>
 
-        {/* Voice-Only Input Section */}
-        <div className="pt-4 border-t border-border/60 space-y-4">
-          <div className="rounded-2xl border border-indigo-500/30 bg-indigo-500/10 p-4 text-sm text-foreground space-y-2">
-            <div className="flex items-center justify-between text-xs font-semibold text-indigo-400">
-              <span className="flex items-center gap-1.5">
-                <Mic className={`h-4 w-4 ${isRecording ? "animate-pulse text-red-400" : ""}`} />
-                <span>{isRecording ? "Microphone Active (Listening...)" : "Voice Chat Only"}</span>
-              </span>
-              {isRecording && <span className="h-2 w-2 rounded-full bg-red-500 animate-ping" />}
-            </div>
+          {/* Submit Answer & Next Question Primary Action Button */}
+          <button
+            type="button"
+            onClick={handleSendVoiceAnswer}
+            disabled={!voiceTranscript.trim() || submitting}
+            className="px-6 py-3.5 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-extrabold text-xs shadow-lg transition-all disabled:opacity-40 flex items-center gap-2"
+          >
+            {submitting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <>
+                <span>Submit & Next</span>
+                <Send className="h-4 w-4" />
+              </>
+            )}
+          </button>
 
-            <div className="font-medium text-foreground min-h-[48px] italic">
-              {voiceTranscript ? (
-                `"${voiceTranscript}"`
-              ) : isRecording ? (
-                <span className="text-muted-foreground not-italic">
-                  Speak your answer aloud... (Voice auto-transcribing in real time)
-                </span>
-              ) : (
-                <span className="text-muted-foreground not-italic">
-                  Microphone paused. Click "Start Voice Mic" to speak.
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={toggleRecording}
-              className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-3 px-4 text-sm font-semibold transition-all ${
-                isRecording
-                  ? "bg-red-500 text-white animate-pulse shadow-lg shadow-red-500/30"
-                  : "bg-muted text-foreground border border-border hover:bg-accent"
-              }`}
-            >
-              {isRecording ? (
-                <>
-                  <MicOff className="h-4 w-4" />
-                  <span>Pause Mic</span>
-                </>
-              ) : (
-                <>
-                  <Mic className="h-4 w-4 text-indigo-400" />
-                  <span>Start Voice Mic</span>
-                </>
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={handleSendVoiceAnswer}
-              disabled={!voiceTranscript.trim() || submitting}
-              className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-6 py-3 text-sm font-bold text-white shadow-lg transition-all hover:opacity-90 disabled:opacity-40"
-            >
-              {submitting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <>
-                  <span>Submit Voice Answer</span>
-                  <Send className="h-4 w-4" />
-                </>
-              )}
-            </button>
-          </div>
+          {/* End Call Button */}
+          <button
+            type="button"
+            onClick={handleFinishInterview}
+            className="p-3.5 rounded-full bg-red-600 hover:bg-red-700 text-white font-extrabold transition-all shadow-lg"
+            title="End Interview Call"
+          >
+            <PhoneOff className="h-5 w-5" />
+          </button>
         </div>
       </div>
+
+      {/* COLLAPSIBLE LIVE TRANSCRIPT DRAWER */}
+      {showTranscriptDrawer && (
+        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-40 w-[94%] max-w-4xl max-h-72 rounded-3xl bg-slate-900/95 border border-slate-800 p-4 shadow-2xl backdrop-blur flex flex-col space-y-3 overflow-hidden">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+            <h3 className="text-xs font-extrabold text-emerald-400 flex items-center gap-2">
+              <Subtitles className="h-4 w-4" />
+              <span>Full Interview Transcript & Audio Captions</span>
+            </h3>
+            <button
+              onClick={() => setShowTranscriptDrawer(false)}
+              className="text-slate-400 hover:text-white"
+            >
+              <ChevronDown className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto space-y-2.5 p-2 text-xs">
+            {interview.transcript?.map((item, idx) => (
+              <div
+                key={idx}
+                className={`p-3 rounded-2xl border ${
+                  item.role === "interviewer"
+                    ? "bg-slate-950 border-slate-800 text-slate-200"
+                    : "bg-emerald-950/60 border-emerald-500/40 text-emerald-100"
+                }`}
+              >
+                <span className="font-extrabold block text-[10px] uppercase text-slate-400 mb-1">
+                  {item.role === "interviewer" ? interviewerName : "You (Candidate)"}
+                </span>
+                <p className="font-medium leading-relaxed">{item.text}</p>
+              </div>
+            ))}
+            <div ref={transcriptEndRef} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
