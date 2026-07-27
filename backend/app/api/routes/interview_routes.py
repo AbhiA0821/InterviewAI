@@ -19,6 +19,7 @@ class StartInterviewRequest(BaseModel):
     target_role: str
     resume_id: Optional[int] = None
     interview_type: Optional[str] = "technical"
+    experience_level: Optional[str] = "Fresher"
 
 
 class AnswerRequest(BaseModel):
@@ -44,6 +45,7 @@ def start_interview(request: StartInterviewRequest, db: Session = Depends(get_db
         target_role=target_role,
         resume_summary=resume_summary,
         interview_type=request.interview_type or "technical",
+        experience_level=request.experience_level or "Fresher",
         num_questions=5,
     )
 

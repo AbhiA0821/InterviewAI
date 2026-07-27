@@ -76,17 +76,14 @@ export default function ResumeUploadPage() {
         const result = await resumeService.uploadResume(selectedFile);
         setParsedResume(result);
         
-        // Auto-determine domain & job profile from AI resume analysis
+        // Auto-determine domain & job profile from AI resume analysis only if targetRole is default
         if (result.parsed_json) {
           const detectedRole =
             result.parsed_json.domain ||
             result.parsed_json.job_title ||
             result.parsed_json.recommended_role;
-          if (detectedRole) {
+          if (detectedRole && (!targetRole || targetRole === "Full Stack Software Engineer")) {
             setTargetRole(detectedRole);
-          }
-          if (result.parsed_json.experience_level) {
-            setExperienceLevel(result.parsed_json.experience_level as any);
           }
         }
       } catch (err: any) {
@@ -421,6 +418,19 @@ export default function ResumeUploadPage() {
 
             {/* Right Column: Selected Details Fields */}
             <div className="md:col-span-7 space-y-4">
+              <div>
+                <label className="text-xs font-bold text-slate-600 block mb-1">Interview Round Type</label>
+                <div className="rounded-full border border-emerald-500/40 bg-emerald-50 px-5 py-2.5 text-xs font-black text-emerald-800 flex items-center gap-2">
+                  <span>
+                    {interviewType === "technical"
+                      ? "🛠️ Core Technical Round"
+                      : interviewType === "hr"
+                      ? "👥 HR & Behavioral Round"
+                      : "🧠 Analytical & Soft Skills Round"}
+                  </span>
+                </div>
+              </div>
+
               <div>
                 <label className="text-xs font-bold text-slate-600 block mb-1">Domain</label>
                 <div className="rounded-full border border-slate-300 bg-slate-50 px-5 py-2.5 text-xs font-semibold text-slate-800">

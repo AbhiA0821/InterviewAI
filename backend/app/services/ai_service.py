@@ -101,15 +101,17 @@ class AIService:
         target_role: str,
         resume_summary: str,
         interview_type: str = "technical",
+        experience_level: str = "Fresher",
         num_questions: int = 5,
     ) -> List[Dict[str, Any]]:
         """Use Groq API to generate dynamic, resume-driven technical, HR, behavioral, and situational questions."""
         prompt = (
             f"You are a Senior Technical & HR Lead conducting an interview for the role of '{target_role}'.\n"
-            f"Interview Mode: {interview_type.upper()}.\n"
+            f"Candidate Experience Level: {experience_level.upper()}.\n"
+            f"Interview Round Type: {interview_type.upper()} (If 'HR', focus on behavioral, cultural fit, salary expectations, motivation. If 'TECHNICAL', focus on core engineering and code architecture. If 'NON_TECHNICAL', focus on analytical skills, logic, and soft skills).\n"
             f"Candidate Resume Content:\n{resume_summary[:4000]}\n\n"
-            "CRITICAL INSTRUCTION: Every question MUST be deeply resume-driven! Directly mention specific projects, tools, frameworks, skills, certifications, or experiences listed in the candidate's resume content above.\n"
-            f"Generate exactly {num_questions} questions covering Technical, HR, Behavioral, and Situational aspects.\n"
+            f"CRITICAL INSTRUCTION: Every question MUST be deeply resume-driven and tailored strictly to the selected round type ({interview_type.upper()}) and experience level ({experience_level})! Directly mention specific projects, tools, frameworks, skills, certifications, or experiences listed in the candidate's resume content above.\n"
+            f"Generate exactly {num_questions} questions.\n"
             "Return ONLY a valid JSON array of objects with keys: "
             '["id", "type", "question", "difficulty"]. Example:\n'
             '[{"id": 1, "type": "technical", "question": "I see in your resume that you worked on [Project Name] using [Tool/Skill]. How did you...", "difficulty": "Medium"}]'

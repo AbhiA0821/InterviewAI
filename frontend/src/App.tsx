@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Navbar } from "./components/common/Navbar";
 import LandingPage from "./pages/LandingPage";
 import DashboardPage from "./pages/DashboardPage";
@@ -53,82 +53,91 @@ function RequireAuth({ children }: { children: JSX.Element }) {
   return children;
 }
 
+function AppContent() {
+  const location = useLocation();
+  const isInterviewPage = location.pathname.startsWith("/interview/");
+
+  return (
+    <div className={`min-h-screen bg-background text-foreground flex flex-col font-sans selection:bg-indigo-500/30 ${isInterviewPage ? "h-screen max-h-screen overflow-hidden bg-slate-950" : ""}`}>
+      <Navbar />
+      <main className={isInterviewPage ? "h-full w-full p-0 overflow-hidden flex-1" : "flex-1 container mx-auto px-4 py-8 max-w-7xl"}>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route
+            path="/"
+            element={
+              <RequireAuth>
+                <LandingPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <RequireAuth>
+                <DashboardPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/upload"
+            element={
+              <RequireAuth>
+                <ResumeUploadPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/mirror_room/:id"
+            element={
+              <RequireAuth>
+                <MirrorRoomPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/mirror_room"
+            element={
+              <RequireAuth>
+                <MirrorRoomPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/interview/:id"
+            element={
+              <RequireAuth>
+                <LiveInterviewPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/feedback/:id"
+            element={
+              <RequireAuth>
+                <FeedbackPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/history"
+            element={
+              <RequireAuth>
+                <HistoryPage />
+              </RequireAuth>
+            }
+          />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </main>
+    </div>
+  );
+}
+
 function App() {
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-background text-foreground flex flex-col font-sans selection:bg-indigo-500/30">
-        <Navbar />
-        <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route
-              path="/"
-              element={
-                <RequireAuth>
-                  <LandingPage />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/dashboard"
-              element={
-                <RequireAuth>
-                  <DashboardPage />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/upload"
-              element={
-                <RequireAuth>
-                  <ResumeUploadPage />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/mirror_room/:id"
-              element={
-                <RequireAuth>
-                  <MirrorRoomPage />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/mirror_room"
-              element={
-                <RequireAuth>
-                  <MirrorRoomPage />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/interview/:id"
-              element={
-                <RequireAuth>
-                  <LiveInterviewPage />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/feedback/:id"
-              element={
-                <RequireAuth>
-                  <FeedbackPage />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/history"
-              element={
-                <RequireAuth>
-                  <HistoryPage />
-                </RequireAuth>
-              }
-            />
-            <Route path="*" element={<Navigate to="/login" replace />} />
-          </Routes>
-        </main>
-      </div>
+      <AppContent />
     </BrowserRouter>
   );
 }

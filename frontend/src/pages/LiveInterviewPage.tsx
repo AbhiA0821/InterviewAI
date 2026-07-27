@@ -23,8 +23,8 @@ export default function LiveInterviewPage() {
   const navigate = useNavigate();
 
   const initialGender =
-    (searchParams.get("gender") as "female" | "male") ||
-    (localStorage.getItem("selected_gender") as "female" | "male") ||
+    (searchParams.get("gender") as any) ||
+    (localStorage.getItem("selected_gender") as any) ||
     "female";
 
   const durationParam =
@@ -45,14 +45,14 @@ export default function LiveInterviewPage() {
   const [submitting, setSubmitting] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [interviewerGender, setInterviewerGender] = useState<"female" | "male">(initialGender);
+  const [interviewerGender, setInterviewerGender] = useState<"female" | "male" | "male1" | "male2">(initialGender);
 
   const [avatarStatus, setAvatarStatus] = useState<"speaking" | "listening" | "thinking" | "idle">("idle");
   const [speakingBoundaryTick, setSpeakingBoundaryTick] = useState(0);
   const [timerSeconds, setTimerSeconds] = useState<number>(getSecondsFromDuration(durationParam));
   const [error, setError] = useState("");
 
-  // Controls for Mocklingo Floating UI
+  // Controls for Floating UI
   const [cameraActive, setCameraActive] = useState(true);
   const [micActive, setMicActive] = useState(true);
   const [showTranscriptDrawer, setShowTranscriptDrawer] = useState(false);
@@ -120,7 +120,7 @@ export default function LiveInterviewPage() {
     };
   }, []);
 
-  // Continuous Speech Recognition
+  // Continuous Speech Recognition (Indian English)
   const startAutoVoiceListening = () => {
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -139,7 +139,7 @@ export default function LiveInterviewPage() {
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
-      recognition.lang = "en-IN";
+      recognition.lang = "en-IN"; // Strict Indian English Speech Recognition
 
       recognition.onresult = (event: any) => {
         let transcript = "";
@@ -172,7 +172,7 @@ export default function LiveInterviewPage() {
     }
   };
 
-  // Speak question with high quality TTS
+  // Speak question with high quality, confident, loud Indian English TTS
   const speakText = (text: string) => {
     if (!("speechSynthesis" in window)) {
       startAutoVoiceListening();
@@ -189,37 +189,50 @@ export default function LiveInterviewPage() {
     }
 
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.95;
-    utterance.volume = 1.0;
-    utterance.lang = "en-IN";
+    utterance.rate = 0.98; // Clear, confident HR pacing
+    utterance.volume = 1.0; // Loud and clear
+    utterance.lang = "en-IN"; // Strict Indian English
 
     const indianVoices = voices.filter(
       (v) =>
         v.lang.includes("IN") ||
+        v.lang.includes("in") ||
         v.name.toLowerCase().includes("india") ||
         v.name.toLowerCase().includes("hindi") ||
         v.name.toLowerCase().includes("heera") ||
         v.name.toLowerCase().includes("ravi") ||
-        v.name.toLowerCase().includes("veena")
+        v.name.toLowerCase().includes("veena") ||
+        v.name.toLowerCase().includes("neerja") ||
+        v.name.toLowerCase().includes("prabhat")
     );
 
     let targetVoice = null;
     if (interviewerGender === "female") {
-      utterance.pitch = 1.6;
+      // Authoritative, confident, loud & clear female HR lead tone
+      utterance.pitch = 1.05;
       targetVoice =
         indianVoices.find((v) => {
           const n = v.name.toLowerCase();
-          return n.includes("heera") || n.includes("veena") || n.includes("female") || n.includes("zira");
+          return n.includes("heera") || n.includes("veena") || n.includes("neerja") || n.includes("female");
         }) ||
         (indianVoices.length > 0 ? indianVoices[0] : null) ||
-        voices.find((v) => !v.name.toLowerCase().includes("david") && !v.name.toLowerCase().includes("mark")) ||
-        (voices.length > 1 ? voices[1] : voices[0]);
-    } else {
-      utterance.pitch = 0.8;
+        voices.find((v) => v.lang.startsWith("en") && (v.name.toLowerCase().includes("female") || v.name.toLowerCase().includes("zira"))) ||
+        voices[0];
+    } else if (interviewerGender === "male2") {
+      // Loud, confident, clear Senior Male HR Manager tone
+      utterance.pitch = 1.02;
       targetVoice =
-        indianVoices.find((v) => v.name.toLowerCase().includes("ravi")) ||
+        indianVoices.find((v) => v.name.toLowerCase().includes("prabhat") || v.name.toLowerCase().includes("ravi") || v.name.toLowerCase().includes("male")) ||
         (indianVoices.length > 0 ? indianVoices[0] : null) ||
-        voices.find((v) => v.name.toLowerCase().includes("david")) ||
+        voices.find((v) => v.name.toLowerCase().includes("mark") || v.name.toLowerCase().includes("male")) ||
+        voices[0];
+    } else {
+      // Loud, confident, clear Male AI Tech Lead tone (male1 or male)
+      utterance.pitch = 0.92;
+      targetVoice =
+        indianVoices.find((v) => v.name.toLowerCase().includes("ravi") || v.name.toLowerCase().includes("male")) ||
+        (indianVoices.length > 0 ? indianVoices[0] : null) ||
+        voices.find((v) => v.name.toLowerCase().includes("david") || v.name.toLowerCase().includes("male")) ||
         voices[0];
     }
 
@@ -353,7 +366,12 @@ export default function LiveInterviewPage() {
     );
   }
 
-  const interviewerName = interviewerGender === "male" ? "Abhii (AI Lead)" : "Riya (AI Tech Lead)";
+  const interviewerName =
+    interviewerGender === "female"
+      ? "Riya (AI HR Lead)"
+      : interviewerGender === "male2"
+      ? "Karan (Senior AI HR Manager)"
+      : "Abhi (AI Tech Lead)";
 
   const lastInterviewerMsg = interview.transcript
     ? [...interview.transcript].reverse().find((m) => m.role === "interviewer")
@@ -363,15 +381,15 @@ export default function LiveInterviewPage() {
     (lastInterviewerMsg ? lastInterviewerMsg.text : "Introduce yourself briefly");
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white flex flex-col justify-between p-3 sm:p-6 relative overflow-hidden font-sans selection:bg-emerald-500/30">
+    <div className="h-screen max-h-screen w-full bg-slate-950 text-white flex flex-col justify-between p-2 sm:p-3 relative overflow-hidden font-sans selection:bg-emerald-500/30 select-none">
       {/* MOCKLINGO TOP HEADER BAR */}
-      <div className="flex items-center justify-between px-3 py-2 bg-slate-900/90 border border-slate-800 rounded-2xl backdrop-blur shadow-xl z-30">
+      <div className="flex items-center justify-between px-3 py-1.5 bg-slate-900/90 border border-slate-800 rounded-xl backdrop-blur shadow-xl z-30 shrink-0">
         <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 font-black text-lg shadow-md">
+          <div className="h-8 w-8 rounded-lg bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 font-black text-base shadow-md">
             M
           </div>
           <div>
-            <h1 className="text-sm sm:text-base font-black tracking-wider text-white flex items-center gap-2">
+            <h1 className="text-xs sm:text-sm font-black tracking-wider text-white flex items-center gap-2">
               <span>{interview.target_role}</span>
               <span className="hidden sm:inline-block text-[10px] font-bold text-emerald-400 bg-emerald-950/90 px-2.5 py-0.5 rounded-full border border-emerald-500/40">
                 Mocklingo AI Stage
@@ -381,7 +399,7 @@ export default function LiveInterviewPage() {
         </div>
 
         {/* Center Countdown Timer */}
-        <div className="rounded-full border border-slate-800 bg-slate-950/90 px-4 py-1.5 text-xs font-mono font-bold text-emerald-400 flex items-center gap-2 shadow-inner">
+        <div className="rounded-full border border-slate-800 bg-slate-950/90 px-3.5 py-1 text-xs font-mono font-bold text-emerald-400 flex items-center gap-2 shadow-inner">
           <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
           <span>{formatTimer(timerSeconds)} Mins</span>
         </div>
@@ -391,11 +409,11 @@ export default function LiveInterviewPage() {
           <button
             type="button"
             onClick={() => navigate(`/mirror_room/${interview.interview_id}`)}
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300 hover:text-white text-xs font-bold transition-all shadow-sm"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-300 hover:text-white text-xs font-bold transition-all shadow-sm"
           >
             <span>🪞 Device Check</span>
           </button>
-          <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-400 bg-emerald-950/80 px-3 py-1.5 rounded-full border border-emerald-500/40">
+          <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-400 bg-emerald-950/80 px-3 py-1 rounded-full border border-emerald-500/40">
             <Wifi className="h-3 w-3" />
             <span>Connected</span>
           </span>
@@ -404,16 +422,16 @@ export default function LiveInterviewPage() {
 
       {/* Error Banner */}
       {error && (
-        <div className="rounded-xl border border-red-500/50 bg-red-950/80 p-3 text-xs text-red-300 font-bold text-center z-30">
+        <div className="rounded-xl border border-red-500/50 bg-red-950/80 p-2 text-xs text-red-300 font-bold text-center z-30 shrink-0">
           {error}
         </div>
       )}
 
       {/* MOCKLINGO MAIN AI STAGE WITH FLOATING CANDIDATE PIP */}
-      <div className="relative flex-1 my-4 w-full rounded-3xl overflow-hidden bg-slate-900 border border-slate-800 shadow-2xl flex flex-col justify-between">
+      <div className="relative flex-1 my-2 w-full rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 shadow-2xl flex flex-col justify-between min-h-0">
         {/* Floating Top Translucent Active Question Banner */}
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 w-[92%] sm:w-[80%] max-w-3xl rounded-2xl bg-black/85 border border-slate-700/80 p-3 sm:p-4 text-xs sm:text-sm font-bold text-white shadow-2xl backdrop-blur flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 overflow-hidden">
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 w-[90%] sm:w-[75%] max-w-2xl rounded-xl bg-black/85 border border-slate-700/80 p-2.5 sm:p-3 text-xs sm:text-sm font-bold text-white shadow-2xl backdrop-blur flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 overflow-hidden">
             <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-ping shrink-0" />
             <p className="truncate text-slate-100">{activeQuestionText}</p>
           </div>
@@ -422,7 +440,7 @@ export default function LiveInterviewPage() {
             onClick={() => {
               if (activeQuestionText) speakText(activeQuestionText);
             }}
-            className="shrink-0 flex items-center gap-1.5 text-xs font-extrabold text-emerald-400 bg-emerald-950/90 hover:bg-emerald-900 px-3 py-1.5 rounded-full border border-emerald-500/50 shadow-sm transition-all"
+            className="shrink-0 flex items-center gap-1 text-xs font-extrabold text-emerald-400 bg-emerald-950/90 hover:bg-emerald-900 px-3 py-1 rounded-full border border-emerald-500/50 shadow-sm transition-all"
           >
             <Volume2 className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Replay</span>
@@ -430,7 +448,7 @@ export default function LiveInterviewPage() {
         </div>
 
         {/* Main Stage: Photorealistic AI Interviewer Avatar */}
-        <div className="relative flex-1 w-full h-full">
+        <div className="relative flex-1 w-full h-full min-h-0">
           <InterviewerAvatar
             gender={interviewerGender}
             onGenderChange={(g) => {
@@ -445,7 +463,7 @@ export default function LiveInterviewPage() {
         </div>
 
         {/* Floating Candidate Picture-in-Picture (PiP) Webcam Box */}
-        <div className="absolute top-16 right-4 sm:top-20 sm:right-6 z-20 h-32 w-44 sm:h-44 sm:w-60 rounded-2xl overflow-hidden border-2 border-slate-700/90 bg-slate-950 shadow-2xl transition-all group hover:scale-105 hover:border-emerald-400">
+        <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20 h-28 w-40 sm:h-36 sm:w-52 rounded-xl overflow-hidden border-2 border-slate-700/90 bg-slate-950 shadow-xl transition-all group hover:scale-105 hover:border-emerald-400">
           {cameraActive ? (
             <video
               ref={userVideoRef}
@@ -456,13 +474,13 @@ export default function LiveInterviewPage() {
             />
           ) : (
             <div className="h-full w-full flex flex-col items-center justify-center bg-slate-950 text-slate-500 space-y-1">
-              <CameraOff className="h-8 w-8 text-red-400" />
+              <CameraOff className="h-7 w-7 text-red-400" />
               <span className="text-[10px] font-bold">Camera OFF</span>
             </div>
           )}
 
           {/* Floating Candidate Name & Mic Badge */}
-          <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-[10px] font-extrabold text-white bg-black/80 px-2.5 py-1 rounded-full border border-slate-800 backdrop-blur">
+          <div className="absolute bottom-1.5 left-1.5 right-1.5 flex items-center justify-between text-[10px] font-extrabold text-white bg-black/80 px-2 py-0.5 rounded-full border border-slate-800 backdrop-blur">
             <span className="truncate">You (Candidate)</span>
             {micActive ? (
               <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -473,8 +491,8 @@ export default function LiveInterviewPage() {
         </div>
 
         {/* Live Answer Voice Transcript Input Overlay Box */}
-        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-20 w-[92%] sm:w-[80%] max-w-3xl rounded-2xl bg-black/90 border border-slate-800 p-3 shadow-2xl backdrop-blur space-y-2">
-          <div className="flex items-center justify-between text-[11px] font-extrabold text-slate-400">
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 w-[90%] sm:w-[75%] max-w-2xl rounded-xl bg-black/90 border border-slate-800 p-2 sm:p-2.5 shadow-2xl backdrop-blur space-y-1.5">
+          <div className="flex items-center justify-between text-[10px] sm:text-[11px] font-extrabold text-slate-400">
             <span className="flex items-center gap-1.5 text-emerald-400">
               <Sparkles className="h-3.5 w-3.5" /> Live Voice Transcription
             </span>
@@ -486,14 +504,14 @@ export default function LiveInterviewPage() {
             value={voiceTranscript}
             onChange={(e) => setVoiceTranscript(e.target.value)}
             placeholder="Speak aloud or type your response here... (Voice auto-transcribes live)"
-            className="w-full rounded-xl border border-slate-800 bg-slate-900/90 p-2.5 text-xs sm:text-sm text-white focus:outline-none focus:ring-1 focus:ring-emerald-400 resize-none font-medium"
+            className="w-full rounded-lg border border-slate-800 bg-slate-900/90 p-2 text-xs sm:text-sm text-white focus:outline-none focus:ring-1 focus:ring-emerald-400 resize-none font-medium"
           />
         </div>
       </div>
 
       {/* MOCKLINGO FLOATING BOTTOM CALL CONTROL DOCK BAR */}
-      <div className="relative z-30 flex items-center justify-center gap-3 sm:gap-4 py-2">
-        <div className="flex items-center gap-2 sm:gap-3 bg-slate-900/95 border border-slate-800/90 p-2 rounded-full shadow-2xl backdrop-blur">
+      <div className="relative z-30 flex items-center justify-center gap-3 sm:gap-4 py-1 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 bg-slate-900/95 border border-slate-800/90 p-1.5 rounded-full shadow-2xl backdrop-blur">
           {/* Mic Toggle Button */}
           <button
             type="button"
@@ -509,7 +527,7 @@ export default function LiveInterviewPage() {
                 startAutoVoiceListening();
               }
             }}
-            className={`p-3.5 rounded-full font-extrabold transition-all shadow-md ${
+            className={`p-3 rounded-full font-extrabold transition-all shadow-md ${
               isRecording || avatarStatus === "speaking"
                 ? "bg-emerald-500 text-white shadow-emerald-500/30 ring-2 ring-emerald-400 animate-pulse"
                 : micActive
@@ -518,7 +536,7 @@ export default function LiveInterviewPage() {
             }`}
             title="Toggle Mic / Speaking"
           >
-            {micActive ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
+            {micActive ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
           </button>
 
           {/* Camera Toggle Button */}
@@ -533,28 +551,28 @@ export default function LiveInterviewPage() {
                 }
               }
             }}
-            className={`p-3.5 rounded-full font-extrabold transition-all shadow-md ${
+            className={`p-3 rounded-full font-extrabold transition-all shadow-md ${
               cameraActive
                 ? "bg-slate-800 text-slate-200 hover:bg-slate-700"
                 : "bg-red-950 text-red-400 border border-red-800"
             }`}
             title="Toggle Camera"
           >
-            {cameraActive ? <Camera className="h-5 w-5" /> : <CameraOff className="h-5 w-5" />}
+            {cameraActive ? <Camera className="h-4 w-4" /> : <CameraOff className="h-4 w-4" />}
           </button>
 
           {/* Subtitles / Transcript Toggle Button */}
           <button
             type="button"
             onClick={() => setShowTranscriptDrawer(!showTranscriptDrawer)}
-            className={`p-3.5 rounded-full font-extrabold transition-all shadow-md ${
+            className={`p-3 rounded-full font-extrabold transition-all shadow-md ${
               showTranscriptDrawer
                 ? "bg-emerald-500 text-white"
                 : "bg-slate-800 text-slate-200 hover:bg-slate-700"
             }`}
             title="Subtitles & Live Transcript Log"
           >
-            <Subtitles className="h-5 w-5" />
+            <Subtitles className="h-4 w-4" />
           </button>
 
           {/* Submit Answer & Next Question Primary Action Button */}
@@ -562,7 +580,7 @@ export default function LiveInterviewPage() {
             type="button"
             onClick={handleSendVoiceAnswer}
             disabled={!voiceTranscript.trim() || submitting}
-            className="px-6 py-3.5 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-extrabold text-xs shadow-lg transition-all disabled:opacity-40 flex items-center gap-2"
+            className="px-5 py-3 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-extrabold text-xs shadow-lg transition-all disabled:opacity-40 flex items-center gap-2"
           >
             {submitting ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -578,10 +596,10 @@ export default function LiveInterviewPage() {
           <button
             type="button"
             onClick={handleFinishInterview}
-            className="p-3.5 rounded-full bg-red-600 hover:bg-red-700 text-white font-extrabold transition-all shadow-lg"
+            className="p-3 rounded-full bg-red-600 hover:bg-red-700 text-white font-extrabold transition-all shadow-lg"
             title="End Interview Call"
           >
-            <PhoneOff className="h-5 w-5" />
+            <PhoneOff className="h-4 w-4" />
           </button>
         </div>
       </div>
