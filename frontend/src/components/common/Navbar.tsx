@@ -50,7 +50,7 @@ export const Navbar: React.FC = () => {
               <Bot className="h-5 w-5" />
             </div>
             <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-300 bg-clip-text text-transparent">
-              Interview with Abhi Authentication
+              Interview with Abhi
             </span>
           </Link>
         </div>
