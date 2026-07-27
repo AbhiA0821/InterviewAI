@@ -10,7 +10,7 @@ export default function LiveInterviewPage() {
 
   const [interview, setInterview] = useState<StartInterviewResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [answerText, setAnswerText] = useState("");
+  const [voiceTranscript, setVoiceTranscript] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -40,25 +40,80 @@ export default function LiveInterviewPage() {
     transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [interview?.transcript]);
 
-  // Read aloud interviewer questions using Web Speech Synthesis targeting Indian English voices
+  // Start speech recognition for voice-only mode
+  const startAutoVoiceListening = () => {
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) return;
+
+    try {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = "en-IN"; // Indian English speech input
+
+      recognition.onresult = (event: any) => {
+        let transcript = "";
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+        setVoiceTranscript((prev) => (prev ? prev + " " + transcript : transcript));
+      };
+
+      recognition.onerror = () => {
+        setIsRecording(false);
+        setAvatarStatus("idle");
+      };
+
+      recognition.onend = () => {
+        setIsRecording(false);
+      };
+
+      recognition.start();
+      recognitionRef.current = recognition;
+      setIsRecording(true);
+      setAvatarStatus("listening");
+    } catch (e) {
+      console.warn("Speech recognition auto-start handled:", e);
+    }
+  };
+
+  // Read aloud interviewer questions using Web Speech Synthesis with Indian English voice targeting
   const speakText = (text: string) => {
-    if (!speechEnabled || !("speechSynthesis" in window)) return;
+    if (!speechEnabled || !("speechSynthesis" in window)) {
+      startAutoVoiceListening();
+      return;
+    }
     window.speechSynthesis.cancel();
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 0.95;
     utterance.pitch = interviewerGender === "female" ? 1.1 : 0.9;
-    utterance.lang = "en-IN"; // Target Indian English accent
+    utterance.lang = "en-IN";
 
-    // Search for available browser voices matching Indian English or gender preference
     const voices = window.speechSynthesis.getVoices();
-    const indianVoice = voices.find((v) => {
-      const isIndian = v.lang.includes("en-IN") || v.lang.includes("hi") || v.name.toLowerCase().includes("india");
-      const matchesGender = interviewerGender === "female"
-        ? (v.name.toLowerCase().includes("female") || v.name.toLowerCase().includes("heera") || v.name.toLowerCase().includes("veena") || v.name.toLowerCase().includes("priya"))
-        : (v.name.toLowerCase().includes("male") || v.name.toLowerCase().includes("rishi") || v.name.toLowerCase().includes("rohan") || v.name.toLowerCase().includes("madhur"));
-      return isIndian && matchesGender;
-    }) || voices.find((v) => v.lang.includes("en-IN")) || voices[0];
+    const indianVoice =
+      voices.find((v) => {
+        const isIndian =
+          v.lang.includes("en-IN") || v.lang.includes("hi") || v.name.toLowerCase().includes("india");
+        const matchesGender =
+          interviewerGender === "female"
+            ? v.name.toLowerCase().includes("female") ||
+              v.name.toLowerCase().includes("heera") ||
+              v.name.toLowerCase().includes("veena") ||
+              v.name.toLowerCase().includes("priya")
+            : v.name.toLowerCase().includes("male") ||
+              v.name.toLowerCase().includes("rishi") ||
+              v.name.toLowerCase().includes("rohan") ||
+              v.name.toLowerCase().includes("madhur");
+        return isIndian && matchesGender;
+      }) ||
+      voices.find((v) => v.lang.includes("en-IN")) ||
+      voices[0];
 
     if (indianVoice) {
       utterance.voice = indianVoice;
@@ -73,11 +128,14 @@ export default function LiveInterviewPage() {
     };
 
     utterance.onend = () => {
+      // Auto-turn on microphone when AI finishes speaking!
       setAvatarStatus("listening");
+      startAutoVoiceListening();
     };
 
     utterance.onerror = () => {
       setAvatarStatus("idle");
+      startAutoVoiceListening();
     };
 
     window.speechSynthesis.speak(utterance);
@@ -101,13 +159,17 @@ export default function LiveInterviewPage() {
     }
   };
 
-  const handleSendAnswer = async () => {
-    if (!answerText.trim() || submitting || !interview) return;
+  const handleSendVoiceAnswer = async () => {
+    if (!voiceTranscript.trim() || submitting || !interview) return;
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+    setIsRecording(false);
     setSubmitting(true);
     setAvatarStatus("thinking");
     setError("");
-    const currentAns = answerText;
-    setAnswerText("");
+    const currentAns = voiceTranscript;
+    setVoiceTranscript("");
 
     try {
       const res = await interviewService.answerQuestion(interview.interview_id, currentAns);
@@ -127,7 +189,7 @@ export default function LiveInterviewPage() {
         handleFinishInterview();
       }
     } catch (err: any) {
-      setError("Failed to send answer.");
+      setError("Failed to send voice answer.");
       setAvatarStatus("idle");
     } finally {
       setSubmitting(false);
@@ -138,6 +200,9 @@ export default function LiveInterviewPage() {
     if (!interview || finishing) return;
     setFinishing(true);
     window.speechSynthesis?.cancel();
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
     try {
       await interviewService.finishInterview(interview.interview_id);
       navigate(`/feedback/${interview.interview_id}`);
@@ -148,45 +213,14 @@ export default function LiveInterviewPage() {
   };
 
   const toggleRecording = () => {
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-
-    if (!SpeechRecognition) {
-      alert("Speech recognition is not supported in this browser. Please type your answer.");
-      return;
-    }
-
     if (isRecording) {
-      recognitionRef.current?.stop();
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
       setIsRecording(false);
       setAvatarStatus("idle");
     } else {
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = "en-IN"; // Speech input in Indian English
-
-      recognition.onresult = (event: any) => {
-        let transcript = "";
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          transcript += event.results[i][0].transcript;
-        }
-        setAnswerText((prev) => (prev ? prev + " " + transcript : transcript));
-      };
-
-      recognition.onerror = () => {
-        setIsRecording(false);
-        setAvatarStatus("idle");
-      };
-      recognition.onend = () => {
-        setIsRecording(false);
-        setAvatarStatus("idle");
-      };
-
-      recognition.start();
-      recognitionRef.current = recognition;
-      setIsRecording(true);
-      setAvatarStatus("listening");
+      startAutoVoiceListening();
     }
   };
 
@@ -200,7 +234,7 @@ export default function LiveInterviewPage() {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-4">
         <Loader2 className="h-10 w-10 text-indigo-500 animate-spin" />
-        <p className="text-muted-foreground font-medium">Entering Live AI Interview Room...</p>
+        <p className="text-muted-foreground font-medium">Entering Live AI Voice Interview Room...</p>
       </div>
     );
   }
@@ -218,7 +252,8 @@ export default function LiveInterviewPage() {
 
   const currentQNum = interview.current_question_index + 1;
   const totalQNum = interview.questions?.length || 5;
-  const interviewerName = interviewerGender === "female" ? "Priya (AI Tech Lead)" : "Rohan (AI Principal Engineer)";
+  const interviewerName =
+    interviewerGender === "female" ? "Priya (AI Tech Lead)" : "Rohan (AI Principal Engineer)";
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-12">
@@ -230,7 +265,7 @@ export default function LiveInterviewPage() {
           </div>
           <div>
             <h1 className="font-bold text-xl text-foreground">
-              {interview.target_role} Interview
+              {interview.target_role} (Voice Only)
             </h1>
             <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
               <span className="font-medium text-indigo-400">
@@ -292,7 +327,7 @@ export default function LiveInterviewPage() {
         </div>
       )}
 
-      {/* Main Grid: Left Avatar Column, Right Transcript & Controls */}
+      {/* Main Grid: Left Avatar Column, Right Transcript & Voice Controls */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
         {/* Left Column: Animated AI Avatar with Lip Sync */}
         <div className="md:col-span-5 lg:col-span-4">
@@ -308,9 +343,9 @@ export default function LiveInterviewPage() {
           />
         </div>
 
-        {/* Right Column: Transcript & Answer Input */}
+        {/* Right Column: Voice Chat Transcript & Auto-Mic Controls (Typing Disabled) */}
         <div className="md:col-span-7 lg:col-span-8 rounded-3xl border border-border/80 bg-card p-6 md:p-8 shadow-md flex flex-col justify-between min-h-[460px]">
-          <div className="space-y-4 overflow-y-auto max-h-[380px] pr-2">
+          <div className="space-y-4 overflow-y-auto max-h-[360px] pr-2">
             {interview.transcript?.map((item, idx) => (
               <div
                 key={idx}
@@ -336,7 +371,7 @@ export default function LiveInterviewPage() {
                   }`}
                 >
                   <div className="font-semibold text-xs mb-1 text-muted-foreground">
-                    {item.role === "user" ? "You" : interviewerName}
+                    {item.role === "user" ? "You (Voice Input)" : interviewerName}
                   </div>
                   <p>{item.text}</p>
                 </div>
@@ -345,57 +380,73 @@ export default function LiveInterviewPage() {
             <div ref={transcriptEndRef} />
           </div>
 
-          {/* Answer Input Section */}
-          <div className="pt-4 border-t border-border/60 space-y-3">
-            <div className="relative">
-              <textarea
-                rows={3}
-                value={answerText}
-                onChange={(e) => setAnswerText(e.target.value)}
-                placeholder="Type your response here or click the microphone to speak in Indian English..."
-                className="w-full rounded-2xl border border-input bg-background p-4 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendAnswer();
-                  }
-                }}
-              />
+          {/* Voice-Only Input Section (Typing Action Disabled as Requested) */}
+          <div className="pt-4 border-t border-border/60 space-y-4">
+            {/* Real-time Voice Live Speech Display */}
+            <div className="rounded-2xl border border-indigo-500/30 bg-indigo-500/10 p-4 text-sm text-foreground space-y-2">
+              <div className="flex items-center justify-between text-xs font-semibold text-indigo-400">
+                <span className="flex items-center gap-1.5">
+                  <Mic className={`h-4 w-4 ${isRecording ? "animate-pulse text-red-400" : ""}`} />
+                  <span>{isRecording ? "Microphone Active (Listening...)" : "Voice Chat Only"}</span>
+                </span>
+                {isRecording && <span className="h-2 w-2 rounded-full bg-red-500 animate-ping" />}
+              </div>
 
-              <div className="absolute right-3 bottom-3 flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={toggleRecording}
-                  className={`p-2.5 rounded-xl transition-colors ${
-                    isRecording
-                      ? "bg-red-500 text-white animate-pulse"
-                      : "bg-muted text-muted-foreground hover:text-foreground"
-                  }`}
-                  title={isRecording ? "Stop Voice Recording" : "Start Voice Recording"}
-                >
-                  {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleSendAnswer}
-                  disabled={!answerText.trim() || submitting}
-                  className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-indigo-500 disabled:opacity-40"
-                >
-                  {submitting ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <>
-                      <span>Submit</span>
-                      <Send className="h-4 w-4" />
-                    </>
-                  )}
-                </button>
+              <div className="font-medium text-foreground min-h-[48px] italic">
+                {voiceTranscript ? (
+                  `"${voiceTranscript}"`
+                ) : isRecording ? (
+                  <span className="text-muted-foreground not-italic">
+                    Speak your answer aloud... (Voice is auto-transcribing in real time)
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground not-italic">
+                    Microphone is paused. Click "Start Voice Chat" to speak.
+                  </span>
+                )}
               </div>
             </div>
-            <p className="text-xs text-muted-foreground text-center">
-              Tip: Press <kbd className="px-1.5 py-0.5 rounded bg-muted">Enter</kbd> to submit answer.
-            </p>
+
+            {/* Voice Action Buttons */}
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={toggleRecording}
+                className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-3 px-4 text-sm font-semibold transition-all ${
+                  isRecording
+                    ? "bg-red-500 text-white animate-pulse shadow-lg shadow-red-500/30"
+                    : "bg-muted text-foreground border border-border hover:bg-accent"
+                }`}
+              >
+                {isRecording ? (
+                  <>
+                    <MicOff className="h-4 w-4" />
+                    <span>Pause Voice Mic</span>
+                  </>
+                ) : (
+                  <>
+                    <Mic className="h-4 w-4 text-indigo-400" />
+                    <span>Start Voice Mic</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSendVoiceAnswer}
+                disabled={!voiceTranscript.trim() || submitting}
+                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-6 py-3 text-sm font-bold text-white shadow-lg transition-all hover:opacity-90 disabled:opacity-40"
+              >
+                {submitting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <span>Submit Voice Answer</span>
+                    <Send className="h-4 w-4" />
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>

@@ -4,6 +4,8 @@ import { authService } from "../services/authService";
 import { Bot, CheckCircle, Loader2, Lock, ShieldCheck } from "lucide-react";
 
 
+import { signInWithGooglePopup } from "../services/firebase";
+
 export default function LoginPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -13,13 +15,8 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
     try {
-      // Simulate Google OAuth JWT Login payload
-      await authService.loginWithGoogle({
-        email: "candidate.google@interviewai.com",
-        display_name: "Google Candidate",
-        photo_url: "https://lh3.googleusercontent.com/a/default-user",
-        google_id: "google-oauth-10023491",
-      });
+      const googleData = await signInWithGooglePopup();
+      await authService.loginWithGoogle(googleData);
       navigate("/");
     } catch (err: any) {
       setError("Failed to sign in with Google.");
@@ -27,6 +24,7 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
 
   return (
     <div className="max-w-md mx-auto py-12 space-y-8">

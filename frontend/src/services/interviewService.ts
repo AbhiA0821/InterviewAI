@@ -38,13 +38,19 @@ export interface AnswerResponse {
 }
 
 export const interviewService = {
-  startInterview: async (targetRole: string, resumeId?: number): Promise<StartInterviewResponse> => {
+  startInterview: async (
+    targetRole: string,
+    resumeId?: number,
+    interviewType: string = "technical"
+  ): Promise<StartInterviewResponse> => {
     const response = await apiClient.post<StartInterviewResponse>("/api/interview/start", {
       target_role: targetRole,
       resume_id: resumeId,
+      interview_type: interviewType,
     });
     return response.data;
   },
+
 
   answerQuestion: async (interviewId: number, answerText: string): Promise<AnswerResponse> => {
     const response = await apiClient.post<AnswerResponse>(`/api/interview/${interviewId}/answer`, {
