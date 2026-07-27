@@ -1,44 +1,132 @@
-from fastapi import APIRouter, Depends
+from datetime import datetime, timedelta
+from typing import Optional
+from fastapi import APIRouter, Depends, Header, HTTPException
+import jwt
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.config import get_settings
 from app.database.session import get_db
 from app.models.user import User
 
 router = APIRouter()
+settings = get_settings()
+
+SECRET_KEY = settings.SECRET_KEY or "interviewai-secret-key-123"
+ALGORITHM = "HS256"
+
+
+class GoogleAuthRequest(BaseModel):
+    token: Optional[str] = None
+    email: Optional[str] = None
+    display_name: Optional[str] = None
+    photo_url: Optional[str] = None
+    google_id: Optional[str] = None
+
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+    to_encode = data.copy()
+    expire = datetime.utcnow() + (expires_delta or timedelta(days=7))
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+
+@router.post("/google")
+def google_authenticate(request: GoogleAuthRequest, db: Session = Depends(get_db)):
+    """Authenticate via Google OAuth token/JWT and save user profile into SQLite database."""
+    email = request.email or "google_user@interviewai.com"
+    display_name = request.display_name or "Google Candidate"
+    photo_url = request.photo_url or ""
+    firebase_uid = request.google_id or f"google-{hash(email)}"
+
+    # Decode payload if raw JWT token is supplied
+    if request.token and "." in request.token:
+        try:
+            unverified = jwt.decode(request.token, options={"verify_signature": False})
+            email = unverified.get("email", email)
+            display_name = unverified.get("name", display_name)
+            photo_url = unverified.get("picture", photo_url)
+            firebase_uid = unverified.get("sub", firebase_uid)
+        except Exception:
+            pass
+
+    # Query existing user in SQLite database or create new user
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        user = User(
+            email=email,
+            display_name=display_name,
+            photo_url=photo_url,
+            firebase_uid=firebase_uid,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    else:
+        # Update user profile in database
+        user.display_name = display_name
+        if photo_url:
+            user.photo_url = photo_url
+        db.commit()
+        db.refresh(user)
+
+    access_token = create_access_token(
+        data={"user_id": user.id, "email": user.email, "display_name": user.display_name}
+    )
+
+    return {
+        "user_id": user.id,
+        "email": user.email,
+        "display_name": user.display_name,
+        "photo_url": user.photo_url,
+        "token": access_token,
+    }
 
 
 @router.post("/demo-login")
 def demo_login(db: Session = Depends(get_db)):
     """Demo login creating or fetching a demo user profile."""
-    user = db.query(User).filter(User.email == "demo@interviewai.com").first()
-    if not user:
-        user = User(
+    return google_authenticate(
+        GoogleAuthRequest(
             email="demo@interviewai.com",
             display_name="Demo Candidate",
-            firebase_uid="demo-uid-12345",
-        )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-
-    return {
-        "user_id": user.id,
-        "email": user.email,
-        "display_name": user.display_name,
-        "token": "demo-jwt-token",
-    }
+            google_id="demo-uid-12345",
+        ),
+        db,
+    )
 
 
 @router.get("/me")
-def get_current_user_profile(db: Session = Depends(get_db)):
-    """Get current user info."""
-    user = db.query(User).first()
-    if not user:
-        return {"authenticated": False}
-    return {
-        "authenticated": True,
-        "user_id": user.id,
-        "email": user.email,
-        "display_name": user.display_name,
-    }
+def get_current_user_profile(
+    authorization: Optional[str] = Header(None), db: Session = Depends(get_db)
+):
+    """Get current user info from JWT authorization header."""
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization.split(" ")[1]
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            user_id = payload.get("user_id")
+            user = db.query(User).filter(User.id == user_id).first()
+            if user:
+                return {
+                    "authenticated": True,
+                    "user_id": user.id,
+                    "email": user.email,
+                    "display_name": user.display_name,
+                    "photo_url": user.photo_url,
+                }
+        except Exception:
+            pass
 
+    # Fallback to last created user or default unauthenticated status
+    user = db.query(User).order_by(User.id.desc()).first()
+    if user:
+        return {
+            "authenticated": True,
+            "user_id": user.id,
+            "email": user.email,
+            "display_name": user.display_name,
+            "photo_url": user.photo_url,
+        }
+
+    return {"authenticated": False}

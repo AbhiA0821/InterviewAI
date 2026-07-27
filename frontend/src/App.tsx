@@ -5,6 +5,7 @@ import ResumeUploadPage from "./pages/ResumeUploadPage";
 import LiveInterviewPage from "./pages/LiveInterviewPage";
 import FeedbackPage from "./pages/FeedbackPage";
 import HistoryPage from "./pages/HistoryPage";
+import LoginPage from "./pages/LoginPage";
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
         <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
           <Routes>
             <Route path="/" element={<DashboardPage />} />
+            <Route path="/login" element={<LoginPage />} />
             <Route path="/upload" element={<ResumeUploadPage />} />
             <Route path="/interview/:id" element={<LiveInterviewPage />} />
             <Route path="/feedback/:id" element={<FeedbackPage />} />

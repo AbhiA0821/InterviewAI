@@ -17,6 +17,8 @@ psycopg2-binary>=2.9.9; python_version < "3.13"   # PostgreSQL driver (productio
 
 # --- Auth ---
 firebase-admin>=6.5.0
+pyjwt>=2.8.0
+
 
 # --- AI ---
 google-genai>=0.3.0         # Gemini API / Gemini Live API client
