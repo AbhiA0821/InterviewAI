@@ -44,10 +44,11 @@ def start_interview(request: StartInterviewRequest, db: Session = Depends(get_db
     initial_transcript = [
         {
             "role": "interviewer",
-            "text": f"Hello! Welcome to your {mode_name} AI interview for {request.target_role}. Let's begin. {first_q_text}",
+            "text": f"Hello! Welcome to your interview today. I will be conducting your practice session for {request.target_role}. I'm excited to speak with you! Let's begin with our first question: {first_q_text}",
             "timestamp": datetime.utcnow().isoformat(),
         }
     ]
+
 
 
     interview = Interview(

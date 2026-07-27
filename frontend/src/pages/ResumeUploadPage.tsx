@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ParsedResume, resumeService } from "../services/resumeService";
 import { interviewService } from "../services/interviewService";
-import { ArrowRight, Briefcase, Building2, CheckCircle2, Cpu, FileText, HardHat, Lightbulb, Loader2, Sparkles, Upload, Wrench } from "lucide-react";
+import { ArrowRight, Briefcase, Building2, CheckCircle2, Cpu, FileText, HardHat, Lightbulb, Loader2, Sparkles, Upload, UserCheck, Wrench } from "lucide-react";
 
 export default function ResumeUploadPage() {
   const navigate = useNavigate();
@@ -12,6 +12,7 @@ export default function ResumeUploadPage() {
   const [parsedResume, setParsedResume] = useState<ParsedResume | null>(null);
   const [targetRole, setTargetRole] = useState("Computer Science - Software Engineer");
   const [interviewType, setInterviewType] = useState<"technical" | "hr" | "non_technical">("technical");
+  const [interviewerGender, setInterviewerGender] = useState<"female" | "male">("female");
   const [error, setError] = useState("");
 
   const engineeringBranches = [
@@ -62,7 +63,7 @@ export default function ResumeUploadPage() {
         parsedResume ? parsedResume.id : undefined,
         interviewType
       );
-      navigate(`/interview/${res.interview_id}`);
+      navigate(`/interview/${res.interview_id}?gender=${interviewerGender}`);
     } catch (err: any) {
       setError(err?.response?.data?.detail || "Failed to start interview session.");
     } finally {
@@ -74,10 +75,10 @@ export default function ResumeUploadPage() {
     <div className="max-w-4xl mx-auto space-y-8 pb-12">
       <div className="text-center space-y-2">
         <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">
-          Setup Your AI Practice Interview
+          Step 1: Select AI Avatar, Mode & Branch
         </h1>
         <p className="text-muted-foreground">
-          Choose your Engineering Branch, select Interview Type (HR / Technical / Non-Technical), and optionally upload a resume.
+          Select your AI Interviewer Avatar (Priya or Rohan), Interview Mode (HR / Technical / Non-Technical), and Engineering Branch.
         </p>
       </div>
 
@@ -87,9 +88,58 @@ export default function ResumeUploadPage() {
         </div>
       )}
 
-      {/* Interview Mode Selector: HR vs Technical vs Non-Technical */}
-      <div className="rounded-3xl border border-indigo-500/30 bg-gradient-to-r from-indigo-950/40 via-card to-violet-950/30 p-6 md:p-8 space-y-4 shadow-lg">
-        <h2 className="text-lg font-bold text-foreground">Select Interview Type</h2>
+      {/* Step 1: Select AI Interviewer Avatar FIRST */}
+      <div className="rounded-3xl border border-indigo-500/30 bg-gradient-to-r from-indigo-950/50 via-card to-violet-950/40 p-6 md:p-8 space-y-4 shadow-xl">
+        <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+          <UserCheck className="h-5 w-5 text-indigo-400" />
+          <span>Step 1: Choose Your AI Interviewer Avatar</span>
+        </h2>
+        <p className="text-xs text-muted-foreground">
+          Your selected avatar will greet you and conduct the voice interview with an Indian English accent.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
+          {/* Female Avatar Option */}
+          <div
+            onClick={() => setInterviewerGender("female")}
+            className={`cursor-pointer rounded-2xl border p-5 transition-all text-center space-y-3 ${
+              interviewerGender === "female"
+                ? "border-indigo-500 bg-indigo-500/20 shadow-xl ring-2 ring-indigo-500/60"
+                : "border-border/60 bg-muted/20 hover:bg-accent"
+            }`}
+          >
+            <div className="relative h-28 w-28 mx-auto rounded-full overflow-hidden border-2 border-indigo-500/40 shadow-md">
+              <img src="/avatars/female.png" alt="Priya Avatar" className="h-full w-full object-cover" />
+            </div>
+            <div>
+              <h3 className="font-bold text-base text-foreground">Priya (Female Voice)</h3>
+              <p className="text-xs text-indigo-300 font-medium">Senior AI Tech Lead • Indian Accent</p>
+            </div>
+          </div>
+
+          {/* Male Avatar Option */}
+          <div
+            onClick={() => setInterviewerGender("male")}
+            className={`cursor-pointer rounded-2xl border p-5 transition-all text-center space-y-3 ${
+              interviewerGender === "male"
+                ? "border-indigo-500 bg-indigo-500/20 shadow-xl ring-2 ring-indigo-500/60"
+                : "border-border/60 bg-muted/20 hover:bg-accent"
+            }`}
+          >
+            <div className="relative h-28 w-28 mx-auto rounded-full overflow-hidden border-2 border-indigo-500/40 shadow-md">
+              <img src="/avatars/male.png" alt="Rohan Avatar" className="h-full w-full object-cover" />
+            </div>
+            <div>
+              <h3 className="font-bold text-base text-foreground">Rohan (Male Voice)</h3>
+              <p className="text-xs text-indigo-300 font-medium">Principal AI Engineer • Indian Accent</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Step 2: Select Interview Mode: HR vs Technical vs Non-Technical */}
+      <div className="rounded-3xl border border-border/80 bg-card p-6 md:p-8 space-y-4 shadow-sm">
+        <h2 className="text-lg font-bold text-foreground">Step 2: Select Interview Type</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <button
             type="button"
@@ -147,14 +197,14 @@ export default function ResumeUploadPage() {
         </div>
       </div>
 
-      {/* Target Engineering Branch Selector */}
+      {/* Step 3: Target Engineering Branch Selector */}
       <div className="rounded-3xl border border-border/80 bg-card p-6 md:p-8 space-y-6 shadow-sm">
         <div className="flex items-center gap-3 border-b border-border/60 pb-4">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/10 text-violet-400">
             <Sparkles className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-foreground">Select Engineering Branch / Role</h2>
+            <h2 className="text-lg font-semibold text-foreground">Step 3: Select Engineering Branch / Role</h2>
             <p className="text-xs text-muted-foreground">Covers all major engineering domains</p>
           </div>
         </div>
@@ -200,7 +250,7 @@ export default function ResumeUploadPage() {
         </div>
       </div>
 
-      {/* Resume Upload Card */}
+      {/* Optional Resume Upload Card */}
       <div className="rounded-3xl border border-border/80 bg-card p-6 md:p-8 space-y-6 shadow-sm">
         <div className="flex items-center gap-3 border-b border-border/60 pb-4">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400">
@@ -208,7 +258,7 @@ export default function ResumeUploadPage() {
           </div>
           <div>
             <h2 className="text-lg font-semibold text-foreground">Upload PDF Resume (Optional)</h2>
-            <p className="text-xs text-muted-foreground">Personalizes questions based on your actual experience</p>
+            <p className="text-xs text-muted-foreground">Personalizes questions based on your experience</p>
           </div>
         </div>
 
@@ -275,11 +325,11 @@ export default function ResumeUploadPage() {
           {starting ? (
             <>
               <Loader2 className="h-6 w-6 animate-spin" />
-              <span>Generating AI {interviewType.toUpperCase()} Interview Questions...</span>
+              <span>Starting Session with {interviewerGender === "female" ? "Priya" : "Rohan"}...</span>
             </>
           ) : (
             <>
-              <span>Start {interviewType.toUpperCase()} Practice Session</span>
+              <span>Start Voice Practice with {interviewerGender === "female" ? "Priya" : "Rohan"}</span>
               <ArrowRight className="h-6 w-6" />
             </>
           )}

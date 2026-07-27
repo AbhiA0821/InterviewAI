@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { interviewService, StartInterviewResponse } from "../services/interviewService";
 import { InterviewerAvatar } from "../components/interview/InterviewerAvatar";
 import { Bot, CheckCircle, Clock, Loader2, Mic, MicOff, Send, User, Volume2, VolumeX } from "lucide-react";
 
 export default function LiveInterviewPage() {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+
+  const initialGender = (searchParams.get("gender") as "female" | "male") || "female";
 
   const [interview, setInterview] = useState<StartInterviewResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -15,7 +18,8 @@ export default function LiveInterviewPage() {
   const [finishing, setFinishing] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [speechEnabled, setSpeechEnabled] = useState(true);
-  const [interviewerGender, setInterviewerGender] = useState<"female" | "male">("female");
+  const [interviewerGender, setInterviewerGender] = useState<"female" | "male">(initialGender);
+
   const [avatarStatus, setAvatarStatus] = useState<"speaking" | "listening" | "thinking" | "idle">("idle");
   const [speakingBoundaryTick, setSpeakingBoundaryTick] = useState(0);
   const [timerSeconds, setTimerSeconds] = useState(0);
@@ -283,6 +287,21 @@ export default function LiveInterviewPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => {
+              if (interview?.transcript && interview.transcript.length > 0) {
+                const lastMsg = interview.transcript[interview.transcript.length - 1];
+                if (lastMsg.role === "interviewer") {
+                  speakText(lastMsg.text);
+                }
+              }
+            }}
+            className="flex items-center gap-1.5 rounded-lg border border-indigo-500/40 bg-indigo-500/10 px-3 py-2 text-xs font-semibold text-indigo-300 hover:bg-indigo-500/20"
+          >
+            <Volume2 className="h-4 w-4 text-indigo-400" />
+            <span>Play Avatar Voice</span>
+          </button>
+
+          <button
+            onClick={() => {
               setSpeechEnabled(!speechEnabled);
               window.speechSynthesis?.cancel();
             }}
@@ -300,6 +319,7 @@ export default function LiveInterviewPage() {
               </>
             )}
           </button>
+
 
           <button
             onClick={handleFinishInterview}
