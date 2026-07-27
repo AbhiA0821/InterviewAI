@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { interviewService, StartInterviewResponse } from "../services/interviewService";
 import { InterviewerAvatar } from "../components/interview/InterviewerAvatar";
-import { Bot, Camera, CameraOff, CheckCircle, Clock, Loader2, Mic, MicOff, Send, User, Volume2, VolumeX } from "lucide-react";
+import { Bot, Camera, CameraOff, CheckCircle, Clock, HelpCircle, Loader2, Mic, MicOff, Send, User, Volume2, VolumeX } from "lucide-react";
 
 export default function LiveInterviewPage() {
   const { id } = useParams<{ id: string }>();
@@ -94,7 +94,7 @@ export default function LiveInterviewPage() {
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
-      recognition.lang = "en-IN"; // Indian English voice input
+      recognition.lang = "en-IN";
 
       recognition.onresult = (event: any) => {
         let transcript = "";
@@ -122,7 +122,7 @@ export default function LiveInterviewPage() {
     }
   };
 
-  // Speak questions using Web Speech Synthesis
+  // Speak questions using Web Speech Synthesis with strict female/male voice matching
   const speakText = (text: string) => {
     if (!speechEnabled || !("speechSynthesis" in window)) {
       startAutoVoiceListening();
@@ -132,31 +132,46 @@ export default function LiveInterviewPage() {
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 0.95;
-    utterance.pitch = interviewerGender === "female" ? 1.1 : 0.9;
-    utterance.lang = "en-IN";
+    utterance.pitch = interviewerGender === "female" ? 1.15 : 0.85;
 
     const voices = window.speechSynthesis.getVoices();
-    const indianVoice =
-      voices.find((v) => {
-        const isIndian =
-          v.lang.includes("en-IN") || v.lang.includes("hi") || v.name.toLowerCase().includes("india");
-        const matchesGender =
-          interviewerGender === "female"
-            ? v.name.toLowerCase().includes("female") ||
-              v.name.toLowerCase().includes("heera") ||
-              v.name.toLowerCase().includes("veena") ||
-              v.name.toLowerCase().includes("priya")
-            : v.name.toLowerCase().includes("male") ||
-              v.name.toLowerCase().includes("rishi") ||
-              v.name.toLowerCase().includes("rohan") ||
-              v.name.toLowerCase().includes("madhur");
-        return isIndian && matchesGender;
-      }) ||
-      voices.find((v) => v.lang.includes("en-IN")) ||
-      voices[0];
+    let targetVoice = null;
 
-    if (indianVoice) {
-      utterance.voice = indianVoice;
+    if (interviewerGender === "female") {
+      targetVoice =
+        voices.find(
+          (v) =>
+            v.name.toLowerCase().includes("female") ||
+            v.name.toLowerCase().includes("zira") ||
+            v.name.toLowerCase().includes("priya") ||
+            v.name.toLowerCase().includes("heera") ||
+            v.name.toLowerCase().includes("veena") ||
+            v.name.toLowerCase().includes("samantha") ||
+            v.name.toLowerCase().includes("karen") ||
+            v.name.toLowerCase().includes("victoria")
+        ) ||
+        voices.find((v) => v.name.toLowerCase().includes("female"));
+    } else {
+      targetVoice =
+        voices.find(
+          (v) =>
+            v.name.toLowerCase().includes("male") ||
+            v.name.toLowerCase().includes("david") ||
+            v.name.toLowerCase().includes("mark") ||
+            v.name.toLowerCase().includes("rohan") ||
+            v.name.toLowerCase().includes("rishi") ||
+            v.name.toLowerCase().includes("george") ||
+            v.name.toLowerCase().includes("alex")
+        ) ||
+        voices.find((v) => v.name.toLowerCase().includes("male"));
+    }
+
+    if (!targetVoice && voices.length > 0) {
+      targetVoice = voices[0];
+    }
+
+    if (targetVoice) {
+      utterance.voice = targetVoice;
     }
 
     utterance.onstart = () => {
@@ -294,6 +309,13 @@ export default function LiveInterviewPage() {
   const interviewerName =
     interviewerGender === "female" ? "Priya (AI Tech Lead)" : "Rohan (AI Principal Engineer)";
 
+  const lastInterviewerMsg = interview.transcript
+    ? [...interview.transcript].reverse().find((m) => m.role === "interviewer")
+    : null;
+  const activeQuestionText = lastInterviewerMsg
+    ? lastInterviewerMsg.text
+    : interview.questions?.[interview.current_question_index]?.question || "";
+
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-12 px-2 sm:px-4">
       {/* Header & Status Bar */}
@@ -304,7 +326,7 @@ export default function LiveInterviewPage() {
           </div>
           <div>
             <h1 className="font-bold text-lg sm:text-xl text-foreground">
-              {interview.target_role} (Face-to-Face Video Call)
+              {interview.target_role} (Live Face-to-Face Video Call)
             </h1>
             <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
               <span className="font-medium text-indigo-400">
@@ -322,17 +344,14 @@ export default function LiveInterviewPage() {
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
           <button
             onClick={() => {
-              if (interview?.transcript && interview.transcript.length > 0) {
-                const lastMsg = interview.transcript[interview.transcript.length - 1];
-                if (lastMsg.role === "interviewer") {
-                  speakText(lastMsg.text);
-                }
+              if (activeQuestionText) {
+                speakText(activeQuestionText);
               }
             }}
             className="flex items-center gap-1.5 rounded-lg border border-indigo-500/40 bg-indigo-500/10 px-3 py-2 text-xs font-semibold text-indigo-300 hover:bg-indigo-500/20"
           >
             <Volume2 className="h-4 w-4 text-indigo-400" />
-            <span>Play Voice</span>
+            <span>Replay Voice</span>
           </button>
 
           <button
@@ -393,9 +412,20 @@ export default function LiveInterviewPage() {
         </div>
       )}
 
-      {/* Face-to-Face Dual Video Stream Deck (Side-by-Side: AI Avatar & Candidate Camera) */}
+      {/* Prominent Active Question Banner Overlay on top of Video Call Deck */}
+      <div className="rounded-3xl border border-indigo-500/40 bg-gradient-to-r from-indigo-950/60 via-card to-violet-950/50 p-5 md:p-6 shadow-xl space-y-2">
+        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-indigo-400">
+          <HelpCircle className="h-4 w-4 text-indigo-400" />
+          <span>Current Active Question ({currentQNum}/{totalQNum})</span>
+        </div>
+        <p className="text-base md:text-lg font-extrabold text-foreground leading-snug">
+          {activeQuestionText}
+        </p>
+      </div>
+
+      {/* Face-to-Face Dual 16:9 Widescreen Video Deck (AI Avatar & Candidate Camera Side-by-Side) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Left Video Deck: AI Interviewer Avatar */}
+        {/* Left Video Deck: AI Interviewer 16:9 Widescreen Video Frame */}
         <InterviewerAvatar
           gender={interviewerGender}
           onGenderChange={(g) => {
@@ -407,7 +437,7 @@ export default function LiveInterviewPage() {
           speakingBoundaryTick={speakingBoundaryTick}
         />
 
-        {/* Right Video Deck: Candidate Live Webcam Feed */}
+        {/* Right Video Deck: Candidate Live Webcam 16:9 Widescreen Video Frame */}
         <div className="relative overflow-hidden rounded-3xl border border-indigo-500/30 bg-gradient-to-b from-indigo-950/60 via-card to-card p-6 shadow-2xl flex flex-col justify-between space-y-4">
           <div className="flex items-center justify-between z-10">
             <span className="flex items-center gap-2 text-sm font-bold text-foreground">
@@ -439,19 +469,19 @@ export default function LiveInterviewPage() {
             )}
           </div>
 
-          <div className="text-center text-xs text-muted-foreground font-medium pt-1">
+          <div className="text-center text-xs text-muted-foreground font-medium pt-0.5">
             <span>Facing AI Interviewer • Real-time Voice Chat</span>
           </div>
         </div>
       </div>
 
-      {/* Transcript & Auto-Listen Voice Controls */}
+      {/* Transcript & Voice Input Controls */}
       <div className="rounded-3xl border border-border/80 bg-card p-5 sm:p-8 shadow-md space-y-6">
         <h2 className="font-bold text-lg text-foreground border-b border-border/60 pb-3">
-          Live Interview Transcript & Voice Output
+          Interview Conversation Transcript
         </h2>
 
-        <div className="space-y-4 overflow-y-auto max-h-[320px] pr-2">
+        <div className="space-y-4 overflow-y-auto max-h-[300px] pr-2">
           {interview.transcript?.map((item, idx) => (
             <div
               key={idx}
