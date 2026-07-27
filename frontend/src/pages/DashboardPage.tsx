@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowRight,
@@ -19,7 +19,6 @@ import {
   Star,
   Target,
   Trophy,
-  UserCheck,
   Video,
   Wrench,
   Zap,

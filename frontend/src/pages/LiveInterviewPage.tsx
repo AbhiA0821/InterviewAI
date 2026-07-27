@@ -1,11 +1,10 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { interviewService, StartInterviewResponse } from "../services/interviewService";
 import { InterviewerAvatar } from "../components/interview/InterviewerAvatar";
 import {
   Camera,
   CameraOff,
-  ChevronUp,
   ChevronDown,
   Loader2,
   Mic,

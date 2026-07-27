@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Camera,
@@ -7,7 +7,6 @@ import {
   Volume2,
   Wifi,
   Sparkles,
-  Play,
   ArrowRight,
   ShieldCheck,
   VideoOff,
@@ -20,7 +19,6 @@ export default function MirrorRoomPage() {
   const navigate = useNavigate();
 
   const [interview, setInterview] = useState<StartInterviewResponse | null>(null);
-  const [loading, setLoading] = useState(!!id);
   const [cameraActive, setCameraActive] = useState(true);
   const [micActive, setMicActive] = useState(true);
   const [micVolume, setMicVolume] = useState(0); // 0 to 100
@@ -42,13 +40,10 @@ export default function MirrorRoomPage() {
     if (!id) return;
     async function loadSession() {
       try {
-        setLoading(true);
         const data = await interviewService.getInterview(Number(id));
         setInterview(data);
       } catch (err) {
         console.warn("Failed to load interview session for mirror room:", err);
-      } finally {
-        setLoading(false);
       }
     }
     loadSession();

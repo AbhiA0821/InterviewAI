@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Navbar } from "./components/common/Navbar";
+import LandingPage from "./pages/LandingPage";
 import DashboardPage from "./pages/DashboardPage";
 import ResumeUploadPage from "./pages/ResumeUploadPage";
 import LiveInterviewPage from "./pages/LiveInterviewPage";
@@ -62,6 +63,14 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route
               path="/"
+              element={
+                <RequireAuth>
+                  <LandingPage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/dashboard"
               element={
                 <RequireAuth>
                   <DashboardPage />

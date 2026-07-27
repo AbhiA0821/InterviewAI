@@ -14,6 +14,13 @@ export interface ParsedResume {
     email?: string;
     phone?: string;
     skills?: string[];
+    domain?: string;
+    job_title?: string;
+    recommended_role?: string;
+    experience_level?: string;
+    projects?: string[];
+    education?: string;
+    certifications?: string[];
     summary?: string;
     raw_character_count?: number;
   };

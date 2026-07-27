@@ -80,6 +80,18 @@ export const Navbar: React.FC = () => {
                 : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
             }`}
           >
+            <Bot className="h-4 w-4" />
+            <span>Home</span>
+          </Link>
+
+          <Link
+            to="/dashboard"
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              isActive("/dashboard")
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+            }`}
+          >
             <Sparkles className="h-4 w-4" />
             <span>Dashboard</span>
           </Link>
