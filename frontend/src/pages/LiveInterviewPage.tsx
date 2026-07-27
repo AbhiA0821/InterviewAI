@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { interviewService, StartInterviewResponse } from "../services/interviewService";
 import { InterviewerAvatar } from "../components/interview/InterviewerAvatar";
-import { Bot, CheckCircle, Clock, Loader2, Mic, MicOff, Send, User, Volume2, VolumeX } from "lucide-react";
+import { Bot, Camera, CameraOff, CheckCircle, Clock, Loader2, Mic, MicOff, Send, User, Volume2, VolumeX } from "lucide-react";
 
 export default function LiveInterviewPage() {
   const { id } = useParams<{ id: string }>();
@@ -18,6 +18,7 @@ export default function LiveInterviewPage() {
   const [finishing, setFinishing] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [speechEnabled, setSpeechEnabled] = useState(true);
+  const [cameraEnabled, setCameraEnabled] = useState(true);
   const [interviewerGender, setInterviewerGender] = useState<"female" | "male">(initialGender);
 
   const [avatarStatus, setAvatarStatus] = useState<"speaking" | "listening" | "thinking" | "idle">("idle");
@@ -27,6 +28,7 @@ export default function LiveInterviewPage() {
 
   const transcriptEndRef = useRef<HTMLDivElement | null>(null);
   const recognitionRef = useRef<any>(null);
+  const userVideoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -43,6 +45,40 @@ export default function LiveInterviewPage() {
   useEffect(() => {
     transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [interview?.transcript]);
+
+  // Real-time Candidate Webcam Stream (Works on Android Mobile & Desktop)
+  useEffect(() => {
+    let stream: MediaStream | null = null;
+    async function startCamera() {
+      try {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" },
+            audio: false,
+          });
+          if (userVideoRef.current) {
+            userVideoRef.current.srcObject = stream;
+          }
+        }
+      } catch (err) {
+        console.warn("Camera stream not available or denied:", err);
+      }
+    }
+    if (cameraEnabled) {
+      startCamera();
+    } else {
+      if (userVideoRef.current && userVideoRef.current.srcObject) {
+        const tracks = (userVideoRef.current.srcObject as MediaStream).getTracks();
+        tracks.forEach((t) => t.stop());
+        userVideoRef.current.srcObject = null;
+      }
+    }
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach((t) => t.stop());
+      }
+    };
+  }, [cameraEnabled]);
 
   // Start speech recognition for voice-only mode
   const startAutoVoiceListening = () => {
@@ -238,7 +274,7 @@ export default function LiveInterviewPage() {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-4">
         <Loader2 className="h-10 w-10 text-indigo-500 animate-spin" />
-        <p className="text-muted-foreground font-medium">Entering Live AI Voice Interview Room...</p>
+        <p className="text-muted-foreground font-medium">Entering Live AI Voice & Video Interview Room...</p>
       </div>
     );
   }
@@ -260,16 +296,16 @@ export default function LiveInterviewPage() {
     interviewerGender === "female" ? "Priya (AI Tech Lead)" : "Rohan (AI Principal Engineer)";
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 pb-12">
+    <div className="max-w-6xl mx-auto space-y-6 pb-12 px-2 sm:px-4">
       {/* Header & Status Bar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-2xl border border-border/80 bg-card p-5 shadow-sm">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-2xl border border-border/80 bg-card p-4 sm:p-5 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/20">
             <Bot className="h-6 w-6" />
           </div>
           <div>
-            <h1 className="font-bold text-xl text-foreground">
-              {interview.target_role} (Voice Only)
+            <h1 className="font-bold text-lg sm:text-xl text-foreground">
+              {interview.target_role} (Voice & Camera)
             </h1>
             <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
               <span className="font-medium text-indigo-400">
@@ -284,7 +320,7 @@ export default function LiveInterviewPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
           <button
             onClick={() => {
               if (interview?.transcript && interview.transcript.length > 0) {
@@ -297,7 +333,19 @@ export default function LiveInterviewPage() {
             className="flex items-center gap-1.5 rounded-lg border border-indigo-500/40 bg-indigo-500/10 px-3 py-2 text-xs font-semibold text-indigo-300 hover:bg-indigo-500/20"
           >
             <Volume2 className="h-4 w-4 text-indigo-400" />
-            <span>Play Avatar Voice</span>
+            <span>Play Voice</span>
+          </button>
+
+          <button
+            onClick={() => setCameraEnabled(!cameraEnabled)}
+            className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
+              cameraEnabled
+                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                : "border-border text-muted-foreground hover:bg-accent"
+            }`}
+          >
+            {cameraEnabled ? <Camera className="h-4 w-4 text-emerald-400" /> : <CameraOff className="h-4 w-4" />}
+            <span>{cameraEnabled ? "Camera On" : "Camera Off"}</span>
           </button>
 
           <button
@@ -320,7 +368,6 @@ export default function LiveInterviewPage() {
             )}
           </button>
 
-
           <button
             onClick={handleFinishInterview}
             disabled={finishing}
@@ -329,12 +376,12 @@ export default function LiveInterviewPage() {
             {finishing ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Generating Scorecard...</span>
+                <span>Scorecard...</span>
               </>
             ) : (
               <>
                 <CheckCircle className="h-4 w-4" />
-                <span>Finish & View Feedback</span>
+                <span>Finish</span>
               </>
             )}
           </button>
@@ -347,10 +394,10 @@ export default function LiveInterviewPage() {
         </div>
       )}
 
-      {/* Main Grid: Left Avatar Column, Right Transcript & Voice Controls */}
+      {/* Main Responsive Grid: AI Interviewer & Live Candidate Camera (Works on Android & Desktop) */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-        {/* Left Column: Animated AI Avatar with Lip Sync */}
-        <div className="md:col-span-5 lg:col-span-4">
+        {/* Left Column: AI Avatar Card + Candidate Live Webcam Video Feed */}
+        <div className="md:col-span-5 lg:col-span-4 space-y-6">
           <InterviewerAvatar
             gender={interviewerGender}
             onGenderChange={(g) => {
@@ -361,11 +408,44 @@ export default function LiveInterviewPage() {
             interviewerName={interviewerName}
             speakingBoundaryTick={speakingBoundaryTick}
           />
+
+          {/* Candidate Live Webcam Video Box (Mobile Android & Desktop Responsive) */}
+          <div className="relative overflow-hidden rounded-3xl border border-indigo-500/30 bg-card p-4 shadow-lg space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-2 text-xs font-bold text-foreground">
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Candidate Live Camera</span>
+              </span>
+              <button
+                onClick={() => setCameraEnabled(!cameraEnabled)}
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                {cameraEnabled ? "Disable" : "Enable"}
+              </button>
+            </div>
+
+            <div className="relative h-44 w-full rounded-2xl overflow-hidden bg-black/80 flex items-center justify-center border border-border/60">
+              {cameraEnabled ? (
+                <video
+                  ref={userVideoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="h-full w-full object-cover transform -scale-x-100"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center space-y-2 text-muted-foreground">
+                  <CameraOff className="h-8 w-8 opacity-60" />
+                  <span className="text-xs">Camera Paused</span>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Right Column: Voice Chat Transcript & Auto-Mic Controls (Typing Disabled) */}
-        <div className="md:col-span-7 lg:col-span-8 rounded-3xl border border-border/80 bg-card p-6 md:p-8 shadow-md flex flex-col justify-between min-h-[460px]">
-          <div className="space-y-4 overflow-y-auto max-h-[360px] pr-2">
+        {/* Right Column: Voice Chat Transcript & Auto-Mic Controls */}
+        <div className="md:col-span-7 lg:col-span-8 rounded-3xl border border-border/80 bg-card p-5 sm:p-8 shadow-md flex flex-col justify-between min-h-[480px]">
+          <div className="space-y-4 overflow-y-auto max-h-[380px] pr-2">
             {interview.transcript?.map((item, idx) => (
               <div
                 key={idx}
@@ -391,7 +471,7 @@ export default function LiveInterviewPage() {
                   }`}
                 >
                   <div className="font-semibold text-xs mb-1 text-muted-foreground">
-                    {item.role === "user" ? "You (Voice Input)" : interviewerName}
+                    {item.role === "user" ? "You (Candidate Voice)" : interviewerName}
                   </div>
                   <p>{item.text}</p>
                 </div>
@@ -400,9 +480,8 @@ export default function LiveInterviewPage() {
             <div ref={transcriptEndRef} />
           </div>
 
-          {/* Voice-Only Input Section (Typing Action Disabled as Requested) */}
+          {/* Voice-Only Input & Real-Time Auto Transcriber */}
           <div className="pt-4 border-t border-border/60 space-y-4">
-            {/* Real-time Voice Live Speech Display */}
             <div className="rounded-2xl border border-indigo-500/30 bg-indigo-500/10 p-4 text-sm text-foreground space-y-2">
               <div className="flex items-center justify-between text-xs font-semibold text-indigo-400">
                 <span className="flex items-center gap-1.5">
@@ -417,17 +496,17 @@ export default function LiveInterviewPage() {
                   `"${voiceTranscript}"`
                 ) : isRecording ? (
                   <span className="text-muted-foreground not-italic">
-                    Speak your answer aloud... (Voice is auto-transcribing in real time)
+                    Speak your answer aloud... (Voice auto-transcribing in real time)
                   </span>
                 ) : (
                   <span className="text-muted-foreground not-italic">
-                    Microphone is paused. Click "Start Voice Chat" to speak.
+                    Microphone paused. Click "Start Voice Mic" to speak.
                   </span>
                 )}
               </div>
             </div>
 
-            {/* Voice Action Buttons */}
+            {/* Voice Control Buttons */}
             <div className="flex items-center gap-3">
               <button
                 type="button"
@@ -441,7 +520,7 @@ export default function LiveInterviewPage() {
                 {isRecording ? (
                   <>
                     <MicOff className="h-4 w-4" />
-                    <span>Pause Voice Mic</span>
+                    <span>Pause Mic</span>
                   </>
                 ) : (
                   <>
@@ -461,7 +540,7 @@ export default function LiveInterviewPage() {
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <>
-                    <span>Submit Voice Answer</span>
+                    <span>Submit Answer</span>
                     <Send className="h-4 w-4" />
                   </>
                 )}
