@@ -31,11 +31,26 @@ def structure_resume_text(raw_text: str) -> Dict[str, Any]:
     lines = [line.strip() for line in raw_text.splitlines() if line.strip()]
     candidate_name = lines[0] if lines else "Candidate"
 
+    # Use Groq API via ai_service for deep resume intelligence
+    try:
+        from app.services.ai_service import ai_service
+        ai_analysis = ai_service.analyze_resume(raw_text)
+    except Exception:
+        ai_analysis = {}
+
+    merged_skills = list(set(extracted_skills + (ai_analysis.get("skills") or [])))
+
     return {
         "candidate_name": candidate_name,
         "email": email,
         "phone": phone,
-        "skills": extracted_skills,
+        "skills": merged_skills if merged_skills else ["General Technical Skills"],
+        "domain": ai_analysis.get("domain", "Software Engineer"),
+        "job_title": ai_analysis.get("domain", "Software Engineer"),
+        "experience_level": ai_analysis.get("experience_level", "Intermediate"),
+        "projects": ai_analysis.get("projects") or ["Hands-on Engineering Projects"],
+        "education": ai_analysis.get("education") or "Engineering Degree",
+        "certifications": ai_analysis.get("certifications") or [],
         "summary": raw_text[:300] + ("..." if len(raw_text) > 300 else ""),
         "raw_character_count": len(raw_text),
     }

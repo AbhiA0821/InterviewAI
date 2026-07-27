@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.database.session import get_db
 from app.models.feedback import Feedback
 from app.models.interview import Interview
+from app.services.ai_service import ai_service
 from app.services.gemini_service import gemini_service
 
 router = APIRouter()
@@ -12,7 +13,7 @@ router = APIRouter()
 
 @router.get("/{interview_id}")
 def get_feedback(interview_id: int, db: Session = Depends(get_db)):
-    """Get feedback report for interview. Auto-generates report if not existing."""
+    """Get feedback report for interview. Auto-generates report using Groq AI if missing."""
     feedback = db.query(Feedback).filter(Feedback.interview_id == interview_id).first()
     interview = db.query(Interview).filter(Interview.id == interview_id).first()
 
@@ -20,11 +21,12 @@ def get_feedback(interview_id: int, db: Session = Depends(get_db)):
         if not interview:
             raise HTTPException(status_code=404, detail="Interview session not found.")
 
-        # Generate evaluation report on the fly if missing
+        # Generate evaluation report using Groq AI Service
         try:
-            eval_data = gemini_service.evaluate_interview(
+            eval_data = ai_service.generate_feedback_report(
                 target_role=interview.target_role,
                 transcript=interview.transcript or [],
+                questions=interview.questions or [],
             )
         except Exception:
             eval_data = {}
