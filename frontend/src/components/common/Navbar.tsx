@@ -1,11 +1,28 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Bot, FileText, History, Mic, Sparkles } from "lucide-react";
+import { authService, UserProfile } from "../../services/authService";
+import { Bot, FileText, History, LogIn, Mic, Sparkles, UserCheck } from "lucide-react";
 
 export const Navbar: React.FC = () => {
   const location = useLocation();
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
 
   const isActive = (path: string) => location.pathname === path;
+
+  useEffect(() => {
+    fetchUser();
+  }, [location.pathname]);
+
+  const fetchUser = async () => {
+    try {
+      const data = await authService.getCurrentUser();
+      if (data.authenticated) {
+        setCurrentUser(data);
+      }
+    } catch (e) {
+      console.warn("User auth fetch:", e);
+    }
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -54,6 +71,28 @@ export const Navbar: React.FC = () => {
           >
             <History className="h-4 w-4" />
             <span>History</span>
+          </Link>
+
+          {/* Google Login Link Button */}
+          <Link
+            to="/login"
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-colors border ${
+              isActive("/login")
+                ? "border-indigo-500 bg-indigo-500/15 text-indigo-300"
+                : "border-border/80 bg-muted/30 text-muted-foreground hover:bg-accent hover:text-foreground"
+            }`}
+          >
+            {currentUser ? (
+              <>
+                <UserCheck className="h-4 w-4 text-emerald-400" />
+                <span className="truncate max-w-[110px]">{currentUser.display_name}</span>
+              </>
+            ) : (
+              <>
+                <LogIn className="h-4 w-4 text-indigo-400" />
+                <span>Google Login</span>
+              </>
+            )}
           </Link>
 
           <Link
