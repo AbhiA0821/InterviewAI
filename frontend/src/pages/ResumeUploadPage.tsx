@@ -18,7 +18,8 @@ export default function ResumeUploadPage() {
   const [interviewerGender, setInterviewerGender] = useState<"tanya" | "riya" | "abhii">("riya");
   const [targetRole, setTargetRole] = useState(roleParam);
   const [duration, setDuration] = useState("5 mins");
-  const [interviewType] = useState<"technical" | "hr" | "non_technical">("technical");
+  const typeParam = (searchParams.get("type") as "technical" | "hr" | "non_technical") || "technical";
+  const [interviewType, setInterviewType] = useState<"technical" | "hr" | "non_technical">(typeParam);
   const [agreed, setAgreed] = useState(true);
   const [step, setStep] = useState<"setup" | "precheck">("setup");
   const [error, setError] = useState("");
@@ -180,9 +181,44 @@ export default function ResumeUploadPage() {
 
           {/* Right Panel: Setup Form */}
           <div className="md:col-span-7 p-6 sm:p-8 space-y-6 bg-white">
-            {/* Header Track Pill */}
-            <div className="rounded-xl bg-slate-200 py-3 text-center text-sm font-extrabold text-slate-700">
-              {interviewType === "technical" ? "Core Technical Round" : interviewType === "hr" ? "HR Round" : "Analytical Round"}
+            {/* Interactive Interview Round Type Selector */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-600 block">Select Interview Round Type *</label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 p-1.5 rounded-2xl bg-slate-100 border border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setInterviewType("technical")}
+                  className={`py-2.5 px-3 rounded-xl text-xs font-black transition-all ${
+                    interviewType === "technical"
+                      ? "bg-emerald-500 text-white shadow-md"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-200"
+                  }`}
+                >
+                  🛠️ Core Technical
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInterviewType("hr")}
+                  className={`py-2.5 px-3 rounded-xl text-xs font-black transition-all ${
+                    interviewType === "hr"
+                      ? "bg-emerald-500 text-white shadow-md"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-200"
+                  }`}
+                >
+                  👥 HR & Behavioral
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInterviewType("non_technical")}
+                  className={`py-2.5 px-3 rounded-xl text-xs font-black transition-all ${
+                    interviewType === "non_technical"
+                      ? "bg-emerald-500 text-white shadow-md"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-200"
+                  }`}
+                >
+                  🧠 Analytical Round
+                </button>
+              </div>
             </div>
 
             {/* Experience Level Selector */}
