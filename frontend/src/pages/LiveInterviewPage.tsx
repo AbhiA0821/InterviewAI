@@ -132,42 +132,45 @@ export default function LiveInterviewPage() {
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 0.95;
-    utterance.pitch = interviewerGender === "female" ? 1.15 : 0.85;
+    utterance.pitch = interviewerGender === "female" ? 1.4 : 0.8;
 
     const voices = window.speechSynthesis.getVoices();
     let targetVoice = null;
 
     if (interviewerGender === "female") {
       targetVoice =
-        voices.find(
-          (v) =>
-            v.name.toLowerCase().includes("female") ||
-            v.name.toLowerCase().includes("zira") ||
-            v.name.toLowerCase().includes("priya") ||
-            v.name.toLowerCase().includes("heera") ||
-            v.name.toLowerCase().includes("veena") ||
-            v.name.toLowerCase().includes("samantha") ||
-            v.name.toLowerCase().includes("karen") ||
-            v.name.toLowerCase().includes("victoria")
-        ) ||
-        voices.find((v) => v.name.toLowerCase().includes("female"));
+        voices.find((v) => {
+          const name = v.name.toLowerCase();
+          return (
+            name.includes("female") ||
+            name.includes("zira") ||
+            name.includes("priya") ||
+            name.includes("heera") ||
+            name.includes("veena") ||
+            name.includes("samantha") ||
+            name.includes("karen") ||
+            name.includes("victoria") ||
+            name.includes("hazel") ||
+            name.includes("catherine")
+          );
+        }) ||
+        voices.find((v) => !v.name.toLowerCase().includes("david") && !v.name.toLowerCase().includes("mark"));
     } else {
       targetVoice =
-        voices.find(
-          (v) =>
-            v.name.toLowerCase().includes("male") ||
-            v.name.toLowerCase().includes("david") ||
-            v.name.toLowerCase().includes("mark") ||
-            v.name.toLowerCase().includes("rohan") ||
-            v.name.toLowerCase().includes("rishi") ||
-            v.name.toLowerCase().includes("george") ||
-            v.name.toLowerCase().includes("alex")
-        ) ||
-        voices.find((v) => v.name.toLowerCase().includes("male"));
-    }
-
-    if (!targetVoice && voices.length > 0) {
-      targetVoice = voices[0];
+        voices.find((v) => {
+          const name = v.name.toLowerCase();
+          return (
+            name.includes("male") ||
+            name.includes("david") ||
+            name.includes("mark") ||
+            name.includes("rohan") ||
+            name.includes("rishi") ||
+            name.includes("george") ||
+            name.includes("alex") ||
+            name.includes("james")
+          );
+        }) ||
+        voices.find((v) => !v.name.toLowerCase().includes("zira"));
     }
 
     if (targetVoice) {
@@ -259,12 +262,13 @@ export default function LiveInterviewPage() {
     }
     try {
       await interviewService.finishInterview(interview.interview_id);
-      navigate(`/feedback/${interview.interview_id}`);
     } catch (err: any) {
-      setError("Failed to finalize interview.");
-      setFinishing(false);
+      console.warn("Finish interview handled:", err);
+    } finally {
+      navigate(`/feedback/${interview.interview_id}`);
     }
   };
+
 
   const toggleRecording = () => {
     if (isRecording) {
