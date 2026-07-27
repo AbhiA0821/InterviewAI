@@ -44,10 +44,11 @@ def start_interview(request: StartInterviewRequest, db: Session = Depends(get_db
     initial_transcript = [
         {
             "role": "interviewer",
-            "text": f"Hello! Welcome to your interview today. I will be conducting your practice session for {request.target_role}. I'm excited to speak with you! Let's begin with our first question: {first_q_text}",
+            "text": first_q_text,
             "timestamp": datetime.utcnow().isoformat(),
         }
     ]
+
 
 
 
@@ -110,10 +111,11 @@ def answer_question(
         current_transcript.append(
             {
                 "role": "interviewer",
-                "text": f"Question {next_index + 1}: {followup_q}",
+                "text": followup_q,
                 "timestamp": datetime.utcnow().isoformat(),
             }
         )
+
         interview.current_question_index = next_index
 
     else:

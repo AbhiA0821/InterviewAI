@@ -122,7 +122,7 @@ export default function LiveInterviewPage() {
     }
   };
 
-  // Speak questions using Web Speech Synthesis with strict female/male voice matching
+  // Speak questions using Web Speech Synthesis with crystal clear female/male voice matching
   const speakText = (text: string) => {
     if (!speechEnabled || !("speechSynthesis" in window)) {
       startAutoVoiceListening();
@@ -131,8 +131,9 @@ export default function LiveInterviewPage() {
     window.speechSynthesis.cancel();
 
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.95;
-    utterance.pitch = interviewerGender === "female" ? 1.4 : 0.8;
+    utterance.rate = 1.0;
+    utterance.pitch = interviewerGender === "female" ? 1.25 : 0.95;
+    utterance.volume = 1.0;
 
     const voices = window.speechSynthesis.getVoices();
     let targetVoice = null;
@@ -197,6 +198,7 @@ export default function LiveInterviewPage() {
 
     window.speechSynthesis.speak(utterance);
   };
+
 
   const fetchSession = async () => {
     try {
@@ -316,9 +318,11 @@ export default function LiveInterviewPage() {
   const lastInterviewerMsg = interview.transcript
     ? [...interview.transcript].reverse().find((m) => m.role === "interviewer")
     : null;
-  const activeQuestionText = lastInterviewerMsg
-    ? lastInterviewerMsg.text
-    : interview.questions?.[interview.current_question_index]?.question || "";
+  const activeQuestionText =
+    interview.questions?.[interview.current_question_index]?.question ||
+    (lastInterviewerMsg ? lastInterviewerMsg.text : "");
+
+
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-12 px-2 sm:px-4">
