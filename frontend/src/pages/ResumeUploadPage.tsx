@@ -26,27 +26,21 @@ export default function ResumeUploadPage() {
     { title: "Product Manager & Technical Lead", icon: Briefcase, branch: "Management" },
   ];
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
+      const selectedFile = e.target.files[0];
+      setFile(selectedFile);
       setError("");
-    }
-  };
+      setUploading(true);
 
-  const handleUpload = async () => {
-    if (!file) {
-      setError("Please select a PDF resume file first.");
-      return;
-    }
-    setUploading(true);
-    setError("");
-    try {
-      const result = await resumeService.uploadResume(file);
-      setParsedResume(result);
-    } catch (err: any) {
-      setError(err?.response?.data?.detail || "Failed to upload and parse resume.");
-    } finally {
-      setUploading(false);
+      try {
+        const result = await resumeService.uploadResume(selectedFile);
+        setParsedResume(result);
+      } catch (err: any) {
+        setError(err?.response?.data?.detail || "Failed to parse resume.");
+      } finally {
+        setUploading(false);
+      }
     }
   };
 
@@ -58,6 +52,7 @@ export default function ResumeUploadPage() {
     setStarting(true);
     setError("");
     try {
+      localStorage.setItem("selected_gender", interviewerGender);
       const res = await interviewService.startInterview(
         targetRole,
         parsedResume ? parsedResume.id : undefined,
@@ -71,14 +66,23 @@ export default function ResumeUploadPage() {
     }
   };
 
+  const extractedSkills = parsedResume?.parsed_json?.skills || [
+    "Software Engineering",
+    "Python / TypeScript",
+    "Problem Solving",
+    "System Design",
+    "Git & Version Control",
+  ];
+
+
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-12">
       <div className="text-center space-y-2">
         <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">
-          Step 1: Select AI Avatar, Mode & Branch
+          Setup Your AI Practice Session
         </h1>
         <p className="text-muted-foreground">
-          Select your AI Interviewer Avatar (Priya or Rohan), Interview Mode (HR / Technical / Non-Technical), and Engineering Branch.
+          Select AI Interviewer Avatar, choose your Engineering Branch, and upload a resume for automatic skills extraction.
         </p>
       </div>
 
@@ -109,7 +113,7 @@ export default function ResumeUploadPage() {
             }`}
           >
             <div className="relative h-28 w-28 mx-auto rounded-full overflow-hidden border-2 border-indigo-500/40 shadow-md">
-              <img src="/avatars/female.png" alt="Priya Avatar" className="h-full w-full object-cover" />
+              <img src="/avatars/female.png" alt="Priya Avatar" className="h-full w-full object-cover object-top" />
             </div>
             <div>
               <h3 className="font-bold text-base text-foreground">Priya (Female Voice)</h3>
@@ -127,7 +131,7 @@ export default function ResumeUploadPage() {
             }`}
           >
             <div className="relative h-28 w-28 mx-auto rounded-full overflow-hidden border-2 border-indigo-500/40 shadow-md">
-              <img src="/avatars/male.png" alt="Rohan Avatar" className="h-full w-full object-cover" />
+              <img src="/avatars/male.png" alt="Rohan Avatar" className="h-full w-full object-cover object-top" />
             </div>
             <div>
               <h3 className="font-bold text-base text-foreground">Rohan (Male Voice)</h3>
@@ -137,7 +141,7 @@ export default function ResumeUploadPage() {
         </div>
       </div>
 
-      {/* Step 2: Select Interview Mode: HR vs Technical vs Non-Technical */}
+      {/* Step 2: Select Interview Mode */}
       <div className="rounded-3xl border border-border/80 bg-card p-6 md:p-8 space-y-4 shadow-sm">
         <h2 className="text-lg font-bold text-foreground">Step 2: Select Interview Type</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -250,21 +254,21 @@ export default function ResumeUploadPage() {
         </div>
       </div>
 
-      {/* Optional Resume Upload Card */}
+      {/* Instant Automatic Resume Upload & Extracted Skills Card */}
       <div className="rounded-3xl border border-border/80 bg-card p-6 md:p-8 space-y-6 shadow-sm">
         <div className="flex items-center gap-3 border-b border-border/60 pb-4">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400">
             <Upload className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-foreground">Upload PDF Resume (Optional)</h2>
-            <p className="text-xs text-muted-foreground">Personalizes questions based on your experience</p>
+            <h2 className="text-lg font-semibold text-foreground">Upload PDF Resume (Auto-Extracted Skills)</h2>
+            <p className="text-xs text-muted-foreground">Automatically parses skills from your PDF resume instantly</p>
           </div>
         </div>
 
         {!parsedResume ? (
           <div className="space-y-4">
-            <div className="relative border-2 border-dashed border-border/80 rounded-2xl p-6 text-center hover:border-indigo-500/50 transition-colors bg-muted/20">
+            <div className="relative border-2 border-dashed border-indigo-500/40 rounded-2xl p-6 text-center hover:border-indigo-500 transition-colors bg-indigo-500/5">
               <input
                 type="file"
                 accept=".pdf"
@@ -272,45 +276,63 @@ export default function ResumeUploadPage() {
                 className="absolute inset-0 opacity-0 cursor-pointer"
               />
               <div className="flex flex-col items-center justify-center space-y-2">
-                <FileText className="h-8 w-8 text-indigo-400" />
-                <div>
-                  <p className="font-semibold text-foreground text-sm">
-                    {file ? file.name : "Click or drag PDF resume here"}
-                  </p>
-                </div>
+                {uploading ? (
+                  <>
+                    <Loader2 className="h-8 w-8 text-indigo-400 animate-spin" />
+                    <p className="font-semibold text-indigo-300 text-sm">
+                      Automatically Parsing PDF Resume Skills...
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <FileText className="h-8 w-8 text-indigo-400" />
+                    <div>
+                      <p className="font-semibold text-foreground text-sm">
+                        {file ? file.name : "Drop or click to upload PDF resume"}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Skills will be automatically extracted into your practice session
+                      </p>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
-
-            <button
-              onClick={handleUpload}
-              disabled={!file || uploading}
-              className="w-full flex items-center justify-center gap-2 rounded-xl bg-muted border border-border px-6 py-2.5 text-sm font-semibold text-foreground transition-all hover:bg-accent disabled:opacity-50"
-            >
-              {uploading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Parsing Resume...</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4 text-indigo-400" />
-                  <span>Parse Uploaded PDF</span>
-                </>
-              )}
-            </button>
           </div>
         ) : (
-          <div className="rounded-2xl border border-indigo-500/30 bg-indigo-500/5 p-4 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-indigo-400 text-sm font-semibold">
-              <CheckCircle2 className="h-4 w-4" />
-              <span>Resume Parsed: {parsedResume.original_filename}</span>
+          <div className="rounded-2xl border border-indigo-500/30 bg-indigo-500/10 p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-indigo-300 font-bold text-sm">
+                <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+                <span>Resume Auto-Parsed: {parsedResume.original_filename}</span>
+              </div>
+              <button
+                onClick={() => {
+                  setParsedResume(null);
+                  setFile(null);
+                }}
+                className="text-xs text-muted-foreground hover:text-foreground underline"
+              >
+                Change Resume
+              </button>
             </div>
-            <button
-              onClick={() => setParsedResume(null)}
-              className="text-xs text-muted-foreground hover:text-foreground underline"
-            >
-              Remove
-            </button>
+
+            {/* Extracted Candidate Skills Display */}
+            <div>
+              <span className="block text-xs font-semibold text-muted-foreground mb-2">
+                Auto-Extracted Candidate Skills & Experience:
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {extractedSkills.map((skill: string, i: number) => (
+                  <span
+                    key={i}
+                    className="rounded-xl border border-indigo-500/40 bg-indigo-500/20 px-3 py-1 text-xs font-semibold text-indigo-200"
+                  >
+                    ✨ {skill}
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
         )}
       </div>

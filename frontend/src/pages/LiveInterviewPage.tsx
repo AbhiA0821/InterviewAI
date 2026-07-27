@@ -9,7 +9,10 @@ export default function LiveInterviewPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const initialGender = (searchParams.get("gender") as "female" | "male") || "female";
+  const initialGender =
+    (searchParams.get("gender") as "female" | "male") ||
+    (localStorage.getItem("selected_gender") as "female" | "male") ||
+    "female";
 
   const [interview, setInterview] = useState<StartInterviewResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -20,6 +23,7 @@ export default function LiveInterviewPage() {
   const [speechEnabled, setSpeechEnabled] = useState(true);
   const [cameraEnabled, setCameraEnabled] = useState(true);
   const [interviewerGender, setInterviewerGender] = useState<"female" | "male">(initialGender);
+
 
   const [avatarStatus, setAvatarStatus] = useState<"speaking" | "listening" | "thinking" | "idle">("idle");
   const [speakingBoundaryTick, setSpeakingBoundaryTick] = useState(0);

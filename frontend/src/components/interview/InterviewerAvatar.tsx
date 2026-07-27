@@ -74,13 +74,14 @@ export const InterviewerAvatar: React.FC<InterviewerAvatarProps> = ({
         <img
           src={avatarImage}
           alt={`${interviewerName} AI Interviewer`}
-          className="h-full w-full object-cover transition-transform duration-100 ease-out"
+          className="h-full w-full object-cover object-top transition-transform duration-100 ease-out"
           style={{
             transform: `scale(${speechPulse}) translateY(${
-              status === "speaking" ? (speechPulse - 1) * -8 : 0
+              status === "speaking" ? (speechPulse - 1) * -4 : 0
             }px)`,
           }}
         />
+
 
         {/* Dynamic Status Badges over Video Feed */}
         {status === "speaking" && (
