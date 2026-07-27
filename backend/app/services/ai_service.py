@@ -78,13 +78,14 @@ class AIService:
         if self.is_groq_available() and self.provider == "groq":
             try:
                 prompt = (
-                    f"You are a Senior Tech Lead conducting a real corporate interview for the role: '{target_role}'.\n"
+                    f"You are a Senior Technical & HR Interviewer conducting an interview for the role: '{target_role}'.\n"
                     f"Interview Mode: {interview_type.upper()}.\n"
-                    f"Resume Summary:\n{resume_summary}\n\n"
+                    f"Candidate Resume Content:\n{resume_summary}\n\n"
+                    "CRITICAL INSTRUCTION: Every question MUST be deeply resume-driven! Directly mention specific projects, tools, skills, certifications, metrics, or experiences listed in the candidate's resume content above.\n"
                     f"Generate exactly {num_questions} structured interview questions. "
                     "Return ONLY a valid JSON array of objects with keys: "
                     '["id", "type", "question", "difficulty"]. Example format:\n'
-                    '[{"id": 1, "type": "technical", "question": "...", "difficulty": "intermediate"}]'
+                    '[{"id": 1, "type": "technical", "question": "I see in your resume that you worked on [Project Name] using [Tool/Skill]. How did you...", "difficulty": "medium"}]'
                 )
 
                 headers = {

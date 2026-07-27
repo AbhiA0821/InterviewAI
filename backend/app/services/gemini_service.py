@@ -30,20 +30,22 @@ class GeminiService:
     ) -> List[Dict[str, Any]]:
         """Generate questions tailored to target role/engineering branch and interview mode (HR, Technical, Non-Technical)."""
         prompt = f"""
-You are an expert interviewer conducting a '{interview_type.upper()}' interview for the engineering role/branch of '{target_role}'.
-Candidate Resume Summary:
+You are an expert interviewer conducting a '{interview_type.upper()}' interview for the role of '{target_role}'.
+Candidate Resume Content:
 {resume_summary}
+
+CRITICAL INSTRUCTION: Every question MUST be deeply resume-driven! Directly mention specific projects, tools, frameworks, skills, certifications, or work experience listed in the candidate's resume above.
 
 Interview Type Focus:
 - If 'hr': Focus on HR questions, cultural fit, salary expectations, motivation, conflict resolution, work ethics.
-- If 'technical': Focus on core engineering domain knowledge, technical concepts, problem solving, system design/core principles of {target_role}.
+- If 'technical': Focus on core engineering domain knowledge, technical concepts, problem solving, system design and specific projects in the resume.
 - If 'non_technical': Focus on communication, logical reasoning, aptitude, project management, decision making under ambiguity.
 
 Generate exactly {num_questions} questions.
 Return a valid JSON array of objects, where each object has:
 - "id": number (1 to {num_questions})
 - "type": "hr" | "technical" | "behavioral" | "analytical"
-- "question": string
+- "question": string (MUST reference candidate resume details)
 - "difficulty": "Easy" | "Medium" | "Hard"
 
 Respond ONLY with valid JSON array, no markdown codeblocks or extra text.

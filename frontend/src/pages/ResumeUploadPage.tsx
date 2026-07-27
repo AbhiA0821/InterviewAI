@@ -74,6 +74,20 @@ export default function ResumeUploadPage() {
       try {
         const result = await resumeService.uploadResume(selectedFile);
         setParsedResume(result);
+        
+        // Auto-determine domain & job profile from AI resume analysis
+        if (result.parsed_json) {
+          const detectedRole =
+            result.parsed_json.domain ||
+            result.parsed_json.job_title ||
+            result.parsed_json.recommended_role;
+          if (detectedRole) {
+            setTargetRole(detectedRole);
+          }
+          if (result.parsed_json.experience_level) {
+            setExperienceLevel(result.parsed_json.experience_level as any);
+          }
+        }
       } catch (err: any) {
         setError(err?.response?.data?.detail || "Failed to parse resume.");
       } finally {

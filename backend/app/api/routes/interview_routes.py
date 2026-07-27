@@ -34,10 +34,10 @@ def start_interview(request: StartInterviewRequest, db: Session = Depends(get_db
     if request.resume_id:
         resume = db.query(Resume).filter(Resume.id == request.resume_id).first()
         if resume and resume.raw_text:
-            resume_summary = resume.raw_text[:1000]
+            resume_summary = resume.raw_text[:4000]
             # Auto-detect domain if default role
-            if not target_role or target_role == "General Engineering":
-                target_role = ai_service.auto_detect_domain(resume.raw_text)
+            if not target_role or target_role in ("General Engineering", "Full Stack Software Engineer"):
+                target_role = ai_service.auto_detect_domain(resume.raw_text[:3000])
 
     mode_name = (request.interview_type or "technical").upper()
     questions = ai_service.generate_interview_questions(
