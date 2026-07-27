@@ -1,0 +1,11 @@
+# -----------------------------------------------------------------------
+# Root-level requirements pointer.
+#
+# The actual Python dependencies live in backend/requirements.txt
+# (kept there so the backend/ folder remains a self-contained,
+# independently deployable service, e.g. for Render).
+#
+# To install backend dependencies from the project root:
+#   pip install -r backend/requirements.txt
+# -----------------------------------------------------------------------
+-r backend/requirements.txt
