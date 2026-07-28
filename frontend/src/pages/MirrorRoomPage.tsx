@@ -157,7 +157,7 @@ export default function MirrorRoomPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white p-4 sm:p-8 flex flex-col justify-between space-y-6">
+    <div className="h-full w-full bg-slate-950 text-white p-3 sm:p-6 flex flex-col justify-between overflow-y-auto space-y-4 sm:space-y-6 custom-scrollbar">
       {/* Top Header */}
       <div className="max-w-6xl mx-auto w-full flex items-center justify-between border-b border-slate-800 pb-4">
         <div className="flex items-center gap-3">

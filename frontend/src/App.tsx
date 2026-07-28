@@ -55,12 +55,25 @@ function RequireAuth({ children }: { children: JSX.Element }) {
 
 function AppContent() {
   const location = useLocation();
-  const isInterviewPage = location.pathname.startsWith("/interview/");
+  const isInterviewFlow =
+    location.pathname.startsWith("/interview/") ||
+    location.pathname.startsWith("/mirror_room");
+  const hideNavbar = isInterviewFlow || location.pathname === "/login";
 
   return (
-    <div className={`min-h-screen bg-background text-foreground flex flex-col font-sans selection:bg-indigo-500/30 ${isInterviewPage ? "h-screen max-h-screen overflow-hidden bg-slate-950" : ""}`}>
-      <Navbar />
-      <main className={isInterviewPage ? "h-full w-full p-0 overflow-hidden flex-1" : "flex-1 container mx-auto px-4 py-8 max-w-7xl"}>
+    <div
+      className={`min-h-screen bg-background text-foreground flex flex-col font-sans selection:bg-indigo-500/30 ${
+        isInterviewFlow ? "h-screen max-h-screen overflow-hidden bg-slate-950 p-0 m-0" : ""
+      }`}
+    >
+      {!hideNavbar && <Navbar />}
+      <main
+        className={
+          isInterviewFlow
+            ? "h-full w-full p-0 m-0 overflow-hidden flex-1 flex flex-col min-h-0"
+            : "flex-1 container mx-auto px-4 py-8 max-w-7xl"
+        }
+      >
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route
