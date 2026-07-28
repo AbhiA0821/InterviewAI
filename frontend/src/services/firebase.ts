@@ -15,25 +15,14 @@ export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
 export const signInWithGooglePopup = async () => {
-  try {
-    const result = await signInWithPopup(auth, googleProvider);
-    const user = result.user;
-    const idToken = await user.getIdToken();
-    return {
-      token: idToken,
-      email: user.email || "ainapureabhi0821@gmail.com",
-      display_name: user.displayName || "Abhi Ainapure",
-      photo_url: user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email || 'abhi'}`,
-      google_id: user.uid,
-    };
-  } catch (error) {
-    // Return real user account details on fallback
-    return {
-      token: `google-jwt-${Date.now()}`,
-      email: "ainapureabhi0821@gmail.com",
-      display_name: "Abhi Ainapure",
-      photo_url: "https://api.dicebear.com/7.x/avataaars/svg?seed=ainapureabhi0821@gmail.com",
-      google_id: `google-uid-${Date.now()}`,
-    };
-  }
+  const result = await signInWithPopup(auth, googleProvider);
+  const user = result.user;
+  const idToken = await user.getIdToken();
+  return {
+    token: idToken,
+    email: user.email || "",
+    display_name: user.displayName || user.email?.split("@")[0] || "Google User",
+    photo_url: user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email || "user"}`,
+    google_id: user.uid,
+  };
 };
