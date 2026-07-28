@@ -3,7 +3,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { interviewService, StartInterviewResponse } from "../services/interviewService";
 import { InterviewerAvatar } from "../components/interview/InterviewerAvatar";
 import { useFullscreenProctoring } from "../hooks/useFullscreen";
-import { getIndianEnglishVoice } from "../utils/voiceUtils";
+import { getIndianEnglishVoice, correctSpeechPhonetics } from "../utils/voiceUtils";
 import {
   Camera,
   CameraOff,
@@ -182,8 +182,9 @@ export default function LiveInterviewPage() {
         for (let i = 0; i < event.results.length; i++) {
           transcript += event.results[i][0].transcript;
         }
-        if (transcript.trim()) {
-          setVoiceTranscript(transcript.trim());
+        const cleaned = correctSpeechPhonetics(transcript.trim());
+        if (cleaned) {
+          setVoiceTranscript(cleaned);
         }
       };
 
@@ -424,8 +425,9 @@ export default function LiveInterviewPage() {
     ? [...interview.transcript].reverse().find((m) => m.role === "interviewer")
     : null;
   const activeQuestionText =
+    (lastInterviewerMsg ? lastInterviewerMsg.text : null) ||
     interview.questions?.[interview.current_question_index]?.question ||
-    (lastInterviewerMsg ? lastInterviewerMsg.text : "Introduce yourself briefly");
+    "Introduce yourself briefly";
 
   return (
     <div className="h-screen max-h-screen w-full bg-slate-950 text-white flex flex-col justify-between p-2 sm:p-3 relative overflow-hidden font-sans selection:bg-emerald-500/30 select-none">

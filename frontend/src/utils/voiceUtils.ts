@@ -105,3 +105,52 @@ export function getIndianEnglishVoice(
 
   return tier3 || voices[0] || null;
 }
+
+/**
+ * Corrects common speech-to-text (STT) misrecognitions, Indian name/surname phonetics,
+ * and technical terms in real-time.
+ */
+export function correctSpeechPhonetics(rawTranscript: string, candidateName?: string): string {
+  if (!rawTranscript) return "";
+  let text = rawTranscript;
+
+  // Common phonetic mistranscriptions to actual Indian names/surnames & domain words
+  const replacements: [RegExp, string][] = [
+    // Candidate Specific Surname & Name Corrections
+    [/\babhishek jaipur\b/gi, "Abhishek Aiapure"],
+    [/\babhishek aya pure\b/gi, "Abhishek Aiapure"],
+    [/\babhishek ai a pure\b/gi, "Abhishek Aiapure"],
+    [/\babhishek eye pure\b/gi, "Abhishek Aiapure"],
+    [/\babhishek aiapure\b/gi, "Abhishek Aiapure"],
+    [/\baiapure\b/gi, "Aiapure"],
+    [/\bayapure\b/gi, "Aiapure"],
+    [/\baiya pure\b/gi, "Aiapure"],
+    [/\beye pure\b/gi, "Aiapure"],
+
+    // General Speech-to-Text tech & domain word cleanup
+    [/\bpie thon\b/gi, "Python"],
+    [/\bre act\b/gi, "React"],
+    [/\bnode j s\b/gi, "Node.js"],
+    [/\bfast a p i\b/gi, "FastAPI"],
+    [/\bsql\b/gi, "SQL"],
+  ];
+
+  for (const [pattern, replacement] of replacements) {
+    text = text.replace(pattern, replacement);
+  }
+
+  // If candidate display name is supplied or saved, dynamically match & replace STT errors
+  const savedName = candidateName || localStorage.getItem("user_display_name");
+  if (savedName) {
+    const parts = savedName.trim().split(" ");
+    if (parts.length >= 2) {
+      const firstName = parts[0];
+      const lastName = parts[parts.length - 1];
+      const nameRegex = new RegExp(`\\b${firstName}\\s+(jaipur|ayapure|aiya pure|eye pure|jaipure)\\b`, "gi");
+      text = text.replace(nameRegex, `${firstName} ${lastName}`);
+    }
+  }
+
+  return text;
+}
+
