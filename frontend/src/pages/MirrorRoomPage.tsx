@@ -14,7 +14,6 @@ import {
   Maximize,
   Minimize,
   AlertTriangle,
-  Lock,
 } from "lucide-react";
 import { interviewService, StartInterviewResponse } from "../services/interviewService";
 import { useFullscreenProctoring } from "../hooks/useFullscreen";
@@ -48,6 +47,22 @@ export default function MirrorRoomPage() {
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animFrameRef = useRef<number | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
+
+  // Auto-trigger proctored fullscreen mode directly on load
+  useEffect(() => {
+    enterFullscreen();
+
+    const handleFirstInteraction = () => {
+      if (!document.fullscreenElement) {
+        enterFullscreen();
+      }
+    };
+
+    window.addEventListener("click", handleFirstInteraction, { once: true });
+    return () => {
+      window.removeEventListener("click", handleFirstInteraction);
+    };
+  }, []);
 
   // Fetch session info if id is available
   useEffect(() => {
@@ -238,36 +253,6 @@ export default function MirrorRoomPage() {
           </div>
         </div>
       </div>
-
-      {/* Interactive Fullscreen Banner if Browser Tabs are Visible */}
-      {!isFullscreen && (
-        <div className="max-w-6xl mx-auto w-full rounded-2xl bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-950 border border-indigo-500/40 p-3 shadow-xl backdrop-blur flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-xl bg-indigo-500/20 border border-indigo-400/40 flex items-center justify-center text-indigo-400">
-              <Lock className="h-4 w-4" />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-white flex items-center gap-2">
-                <span>Proctored Exam Environment</span>
-                <span className="text-[10px] font-extrabold uppercase text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded-full border border-emerald-500/40">
-                  Tab-Free Mode
-                </span>
-              </p>
-              <p className="text-[11px] text-slate-300">
-                Click to enter full-screen proctored mode. This hides browser tabs, address bars, and new tab options for a clean exam environment.
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={enterFullscreen}
-            className="shrink-0 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white text-xs font-black shadow-lg transition-all flex items-center gap-2"
-          >
-            <Maximize className="h-3.5 w-3.5" />
-            <span>Enter Fullscreen Stage</span>
-          </button>
-        </div>
-      )}
 
       {/* Main Grid Deck */}
       <div className="max-w-6xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-8 flex-1">

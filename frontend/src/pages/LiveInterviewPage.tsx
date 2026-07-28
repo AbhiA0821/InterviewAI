@@ -28,6 +28,7 @@ export default function LiveInterviewPage() {
 
   const {
     isFullscreen,
+    enterFullscreen,
     toggleFullscreen,
     tabSwitchCount,
     showTabWarning,
@@ -74,6 +75,22 @@ export default function LiveInterviewPage() {
   const userVideoRef = useRef<HTMLVideoElement | null>(null);
   const userMediaStreamRef = useRef<MediaStream | null>(null);
   const shouldKeepListeningRef = useRef<boolean>(false);
+
+  // Auto-trigger proctored fullscreen mode directly on load
+  useEffect(() => {
+    enterFullscreen();
+
+    const handleFirstInteraction = () => {
+      if (!document.fullscreenElement) {
+        enterFullscreen();
+      }
+    };
+
+    window.addEventListener("click", handleFirstInteraction, { once: true });
+    return () => {
+      window.removeEventListener("click", handleFirstInteraction);
+    };
+  }, []);
 
   // Pre-load speech synthesis voices
   useEffect(() => {
