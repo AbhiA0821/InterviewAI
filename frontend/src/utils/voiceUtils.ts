@@ -13,97 +13,87 @@ export function getIndianEnglishVoice(
 
   const isFemale = gender === "female" || gender === "tanya" || gender === "riya";
 
-  const indianFemaleKeywords = [
-    "neerja",
-    "heera",
-    "veena",
-    "sangeeta",
-    "kanya",
-    "ananya",
-    "kavya",
-    "kalpana",
-    "en-in",
-    "india",
-  ];
-  
-  const indianMaleKeywords = [
-    "prabhat",
-    "ravi",
-    "rishi",
-    "karan",
-    "rohan",
-    "abhi",
-    "en-in",
-    "india",
-  ];
-
-  // Helper to parse voice details
   const parse = (v: SpeechSynthesisVoice) => {
     const name = v.name.toLowerCase();
     const lang = (v.lang || "").toLowerCase().replace("_", "-");
-    const isExplicitIndian =
+    const isIndianLang =
       lang.includes("en-in") ||
       lang.includes("hi-in") ||
       name.includes("india") ||
       name.includes("indian") ||
       name.includes("en-in");
-    return { name, lang, isExplicitIndian };
+    const isNaturalNeural = name.includes("natural") || name.includes("neural") || name.includes("online");
+    return { name, lang, isIndianLang, isNaturalNeural };
   };
 
-  // Tier 1: Authentic Indian English Voice matching requested gender
-  const tier1 = voices.find((v) => {
-    const { name, isExplicitIndian } = parse(v);
-
+  // Tier 1: Highest quality Natural / Neural Indian English Voice matching gender
+  const tier1Natural = voices.find((v) => {
+    const { name, isIndianLang, isNaturalNeural } = parse(v);
+    if (!isIndianLang && !name.includes("india")) return false;
     if (isFemale) {
-      const matchesFemaleKeyword =
+      return (
+        name.includes("neerja") ||
+        (isNaturalNeural && (name.includes("female") || !name.includes("male")))
+      );
+    } else {
+      return (
+        name.includes("prabhat") ||
+        (isNaturalNeural && (name.includes("male") || !name.includes("female")))
+      );
+    }
+  });
+
+  if (tier1Natural) return tier1Natural;
+
+  // Tier 2: Standard Indian English Voices matching gender (Neerja, Prabhat, Heera, Veena, Rishi, Ravi, Google Indian English)
+  const tier2 = voices.find((v) => {
+    const { name, isIndianLang } = parse(v);
+    if (isFemale) {
+      const matchesFemale =
         name.includes("neerja") ||
         name.includes("heera") ||
         name.includes("veena") ||
         name.includes("sangeeta") ||
-        name.includes("kanya") ||
         name.includes("ananya") ||
         name.includes("kavya");
-      if (matchesFemaleKeyword) return true;
-      if (isExplicitIndian && (name.includes("female") || name.includes("zira") || !name.includes("male"))) {
+      if (matchesFemale) return true;
+      if (isIndianLang && (name.includes("female") || name.includes("zira") || !name.includes("male"))) {
         return true;
       }
     } else {
-      const matchesMaleKeyword =
+      const matchesMale =
         name.includes("prabhat") ||
         name.includes("ravi") ||
-        name.includes("rishi");
-      if (matchesMaleKeyword) return true;
-      if (isExplicitIndian && (name.includes("male") || !name.includes("female"))) {
+        name.includes("rishi") ||
+        name.includes("karan");
+      if (matchesMale) return true;
+      if (isIndianLang && (name.includes("male") || !name.includes("female"))) {
         return true;
       }
     }
     return false;
   });
 
-  if (tier1) return tier1;
-
-  // Tier 2: Any Indian English / Indian voice regardless of gender
-  const tier2 = voices.find((v) => {
-    const { name, isExplicitIndian } = parse(v);
-    if (isExplicitIndian) return true;
-    return indianFemaleKeywords.some((k) => name.includes(k)) || indianMaleKeywords.some((k) => name.includes(k));
-  });
-
   if (tier2) return tier2;
 
-  // Tier 3: Fallback - Preferred natural / neural English voices
-  const tier3 = voices.find((v) => {
+  // Tier 3: Any Indian English voice regardless of gender
+  const tier3AnyIndian = voices.find((v) => {
+    const { isIndianLang } = parse(v);
+    return isIndianLang;
+  });
+
+  if (tier3AnyIndian) return tier3AnyIndian;
+
+  // Tier 4: Natural / Neural English fallback
+  const tier4Natural = voices.find((v) => {
     const { name, lang } = parse(v);
     return (
       lang.startsWith("en") &&
-      (name.includes("natural") ||
-        name.includes("neural") ||
-        name.includes("google") ||
-        name.includes("online"))
+      (name.includes("natural") || name.includes("neural") || name.includes("google") || name.includes("online"))
     );
   });
 
-  return tier3 || voices[0] || null;
+  return tier4Natural || voices.find((v) => v.lang.startsWith("en")) || voices[0] || null;
 }
 
 /**

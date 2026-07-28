@@ -114,9 +114,12 @@ You are an expert interviewer conducting a '{interview_type.upper()}' interview 
 Candidate Resume Content:
 {resume_summary}
 
-CRITICAL INSTRUCTION: Every question MUST be deeply resume-driven! Directly mention specific projects, tools, frameworks, skills, certifications, or work experience listed in the candidate's resume above.
+CRITICAL MANDATORY RULES:
+1. QUESTION #1 MUST ALWAYS BE A PERSONAL SELF-INTRODUCTION QUESTION!
+   (e.g., "Welcome to your interview for {target_role}! To start off, please introduce yourself, sharing a brief overview of your background, key technical skills, and major projects listed on your resume.")
+2. Questions #2 through #{num_questions} MUST cover core domain knowledge, technical concepts, problem-solving, and resume projects relevant to '{target_role}'.
 
-Interview Type Focus:
+Interview Type Focus for Questions #2-{num_questions}:
 - If 'hr': Focus on HR questions, cultural fit, salary expectations, motivation, conflict resolution, work ethics.
 - If 'technical': Focus on core engineering domain knowledge, technical concepts, problem solving, system design and specific projects in the resume.
 - If 'non_technical': Focus on communication, logical reasoning, aptitude, project management, decision making under ambiguity.
@@ -125,120 +128,133 @@ Generate exactly {num_questions} questions.
 Return a valid JSON array of objects, where each object has:
 - "id": number (1 to {num_questions})
 - "type": "hr" | "technical" | "behavioral" | "analytical"
-- "question": string (MUST reference candidate resume details)
+- "question": string (Question #1 MUST be self-introduction, Questions #2-{num_questions} reference candidate resume details)
 - "difficulty": "Easy" | "Medium" | "Hard"
 
 Respond ONLY with valid JSON array, no markdown codeblocks or extra text.
 """
         text = self._generate_content_with_rotation(prompt)
+        parsed_questions = None
         if text:
             try:
                 if text.startswith("```"):
                     text = text.split("\n", 1)[1].rsplit("\n", 1)[0].strip()
-                return json.loads(text)
+                parsed_questions = json.loads(text)
             except Exception as e:
                 logger.error(f"Gemini API JSON parsing error: {e}")
 
-        # Intelligent Fallback questions tailored to interview_type
-        if interview_type == "hr":
-            return [
-                {
-                    "id": 1,
-                    "type": "hr",
-                    "question": f"Tell me about yourself and why you want to join our organization as a {target_role}?",
-                    "difficulty": "Easy",
-                },
-                {
-                    "id": 2,
-                    "type": "hr",
-                    "question": "What are your salary expectations and availability to start?",
-                    "difficulty": "Easy",
-                },
-                {
-                    "id": 3,
-                    "type": "hr",
-                    "question": "Describe a situation where you had a conflict with a teammate or manager and how you resolved it.",
-                    "difficulty": "Medium",
-                },
-                {
-                    "id": 4,
-                    "type": "hr",
-                    "question": "Where do you see yourself professionally in the next 3 to 5 years?",
-                    "difficulty": "Medium",
-                },
-                {
-                    "id": 5,
-                    "type": "hr",
-                    "question": "How do you maintain work-life balance and handle stressful project deadlines?",
-                    "difficulty": "Medium",
-                },
-            ]
-        elif interview_type == "non_technical":
-            return [
-                {
-                    "id": 1,
-                    "type": "analytical",
-                    "question": f"How do you prioritize competing tasks when managing a project in {target_role}?",
-                    "difficulty": "Easy",
-                },
-                {
-                    "id": 2,
-                    "type": "analytical",
-                    "question": "Walk me through your decision-making process when dealing with incomplete data.",
-                    "difficulty": "Medium",
-                },
-                {
-                    "id": 3,
-                    "type": "analytical",
-                    "question": "How do you communicate complex technical concepts to non-technical stakeholders?",
-                    "difficulty": "Medium",
-                },
-                {
-                    "id": 4,
-                    "type": "analytical",
-                    "question": "Describe a project that failed or missed its goals, and what key lessons you learned.",
-                    "difficulty": "Hard",
-                },
-                {
-                    "id": 5,
-                    "type": "analytical",
-                    "question": "How do you evaluate risk before making a major project decision?",
-                    "difficulty": "Medium",
-                },
-            ]
-        else:
-            return [
-                {
-                    "id": 1,
-                    "type": "technical",
-                    "question": f"What are the core fundamentals and methodologies you apply in {target_role}?",
-                    "difficulty": "Easy",
-                },
-                {
-                    "id": 2,
-                    "type": "technical",
-                    "question": f"Explain a complex technical problem you solved in {target_role} and the tools you used.",
-                    "difficulty": "Medium",
-                },
-                {
-                    "id": 3,
-                    "type": "technical",
-                    "question": "How do you ensure quality control, testing, and safety standards in your engineering projects?",
-                    "difficulty": "Medium",
-                },
-                {
-                    "id": 4,
-                    "type": "technical",
-                    "question": "Walk me through how you optimize performance, throughput, or efficiency in your designs.",
-                    "difficulty": "Hard",
-                },
-                {
-                    "id": 5,
-                    "type": "technical",
-                    "question": "What emerging technologies or industry trends in your branch are you most excited about?",
-                    "difficulty": "Medium",
-                },
-            ]
+        if not parsed_questions or not isinstance(parsed_questions, list) or len(parsed_questions) == 0:
+            # Intelligent Fallback questions tailored to interview_type with Question #1 as Self-Introduction
+            if interview_type == "hr":
+                parsed_questions = [
+                    {
+                        "id": 1,
+                        "type": "hr",
+                        "question": f"Welcome to your interview for {target_role}! To start off, please introduce yourself, sharing a brief overview of your background, key technical skills, and experience listed in your resume.",
+                        "difficulty": "Easy",
+                    },
+                    {
+                        "id": 2,
+                        "type": "hr",
+                        "question": "What are your salary expectations and availability to start?",
+                        "difficulty": "Easy",
+                    },
+                    {
+                        "id": 3,
+                        "type": "hr",
+                        "question": "Describe a situation where you had a conflict with a teammate or manager and how you resolved it.",
+                        "difficulty": "Medium",
+                    },
+                    {
+                        "id": 4,
+                        "type": "hr",
+                        "question": "Where do you see yourself professionally in the next 3 to 5 years?",
+                        "difficulty": "Medium",
+                    },
+                    {
+                        "id": 5,
+                        "type": "hr",
+                        "question": "How do you maintain work-life balance and handle stressful project deadlines?",
+                        "difficulty": "Medium",
+                    },
+                ]
+            elif interview_type == "non_technical":
+                parsed_questions = [
+                    {
+                        "id": 1,
+                        "type": "analytical",
+                        "question": f"Welcome to your interview for {target_role}! To start off, please introduce yourself, sharing a brief overview of your background, key skills, and experience listed in your resume.",
+                        "difficulty": "Easy",
+                    },
+                    {
+                        "id": 2,
+                        "type": "analytical",
+                        "question": f"How do you prioritize competing tasks when managing a project in {target_role}?",
+                        "difficulty": "Easy",
+                    },
+                    {
+                        "id": 3,
+                        "type": "analytical",
+                        "question": "Walk me through your decision-making process when dealing with incomplete data.",
+                        "difficulty": "Medium",
+                    },
+                    {
+                        "id": 4,
+                        "type": "analytical",
+                        "question": "How do you communicate complex technical concepts to non-technical stakeholders?",
+                        "difficulty": "Medium",
+                    },
+                    {
+                        "id": 5,
+                        "type": "analytical",
+                        "question": "Describe a project that failed or missed its goals, and what key lessons you learned.",
+                        "difficulty": "Hard",
+                    },
+                ]
+            else:
+                parsed_questions = [
+                    {
+                        "id": 1,
+                        "type": "technical",
+                        "question": f"Welcome to your interview for {target_role}! To start off, please introduce yourself, sharing a brief overview of your background, key technical skills, and experience listed in your resume.",
+                        "difficulty": "Easy",
+                    },
+                    {
+                        "id": 2,
+                        "type": "technical",
+                        "question": f"What are the core fundamentals and methodologies you apply in {target_role}?",
+                        "difficulty": "Easy",
+                    },
+                    {
+                        "id": 3,
+                        "type": "technical",
+                        "question": f"Explain a complex technical problem you solved in {target_role} and the tools you used.",
+                        "difficulty": "Medium",
+                    },
+                    {
+                        "id": 4,
+                        "type": "technical",
+                        "question": "How do you ensure quality control, testing, and safety standards in your engineering projects?",
+                        "difficulty": "Medium",
+                    },
+                    {
+                        "id": 5,
+                        "type": "technical",
+                        "question": "Walk me through how you optimize performance, throughput, or efficiency in your designs.",
+                        "difficulty": "Hard",
+                    },
+                ]
+
+        # Guarantee Question #1 is always a warm self-introduction
+        if parsed_questions and len(parsed_questions) > 0:
+            first_q_lower = parsed_questions[0].get("question", "").lower()
+            if "introduce" not in first_q_lower and "tell me about yourself" not in first_q_lower:
+                parsed_questions[0]["question"] = (
+                    f"Welcome to your interview for {target_role}! To start off, please introduce yourself, sharing a brief overview of your background, key technical skills, and experience listed in your resume."
+                )
+
+        return parsed_questions
+
 
     def generate_followup_question(
         self,

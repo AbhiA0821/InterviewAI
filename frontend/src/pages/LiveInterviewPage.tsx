@@ -241,19 +241,24 @@ export default function LiveInterviewPage() {
       if (micActive) startAutoVoiceListening();
     };
 
-    const utterance = new SpeechSynthesisUtterance(text);
+    // Humanize text string with conversational pauses for smooth Indian English prosody
+    const humanizedText = text
+      .replace(/([.?!])\s*/g, "$1 ")
+      .replace(/,\s*/g, ", ");
+
+    const utterance = new SpeechSynthesisUtterance(humanizedText);
     utteranceRef.current = utterance; // Prevent garbage collection bug in Chrome/Edge
 
     utterance.lang = "en-IN"; // Enforce authentic Indian English phonetic synthesis
-    utterance.rate = 0.95; // Humanized conversational pacing
+    utterance.rate = 0.92; // Natural, humanized conversational Indian English pace
     utterance.volume = 1.0;
 
     if (interviewerGender === "female") {
-      utterance.pitch = 1.02; // Warm, natural human female pitch
+      utterance.pitch = 1.05; // Warm, friendly Indian female interviewer tone
     } else if (interviewerGender === "male2") {
-      utterance.pitch = 0.98; // Professional, warm male HR manager tone
+      utterance.pitch = 1.0; // Professional, warm Indian male HR tone
     } else {
-      utterance.pitch = 0.95; // Confident, clear male AI tech lead tone
+      utterance.pitch = 0.96; // Confident, clear Indian male AI tech lead tone
     }
 
     const targetVoice = getIndianEnglishVoice(voices, interviewerGender);
