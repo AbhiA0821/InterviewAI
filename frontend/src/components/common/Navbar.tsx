@@ -59,25 +59,24 @@ export const Navbar: React.FC = () => {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <Link to="/" className="flex items-center gap-2.5 font-bold text-xl tracking-tight text-primary">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white shadow-md shadow-emerald-500/20">
-            <Bot className="h-5 w-5" />
+    <header className="sticky top-0 z-50 w-full border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-md supports-[backdrop-filter]:bg-slate-950/70">
+      <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6">
+        <Link to="/" className="flex items-center gap-3 font-black text-xl tracking-tight">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 shadow-md shadow-emerald-500/25">
+            <Bot className="h-5 w-5 stroke-[2.5]" />
           </div>
-          <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-300 bg-clip-text text-transparent">
-            Interview with Abhi
+          <span className="bg-gradient-to-r from-white via-slate-100 to-emerald-400 bg-clip-text text-transparent font-black tracking-wide">
+            InterviewAI <span className="text-xs font-bold text-emerald-400 bg-emerald-950/90 px-2 py-0.5 rounded-full border border-emerald-500/40 ml-1">Pro</span>
           </span>
         </Link>
-
 
         <nav className="flex items-center gap-1 sm:gap-2">
           <Link
             to="/"
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
               isActive("/")
-                ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                ? "bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 shadow-sm"
+                : "text-slate-300 hover:bg-slate-900 hover:text-white"
             }`}
           >
             <Bot className="h-4 w-4" />
@@ -86,10 +85,10 @@ export const Navbar: React.FC = () => {
 
           <Link
             to="/dashboard"
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
               isActive("/dashboard")
-                ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                ? "bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 shadow-sm"
+                : "text-slate-300 hover:bg-slate-900 hover:text-white"
             }`}
           >
             <Sparkles className="h-4 w-4" />
@@ -98,38 +97,42 @@ export const Navbar: React.FC = () => {
 
           <Link
             to="/upload"
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
               isActive("/upload")
-                ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                ? "bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 shadow-sm"
+                : "text-slate-300 hover:bg-slate-900 hover:text-white"
             }`}
           >
             <FileText className="h-4 w-4" />
-            <span>Resume Upload</span>
+            <span>Resume Setup</span>
           </Link>
 
           <Link
             to="/history"
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
               isActive("/history")
-                ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                ? "bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 shadow-sm"
+                : "text-slate-300 hover:bg-slate-900 hover:text-white"
             }`}
           >
             <History className="h-4 w-4" />
             <span>History</span>
           </Link>
 
-          {/* Authenticated Google Account Badge */}
+          {/* Authenticated User Badge */}
           {currentUser ? (
-            <div className="flex items-center gap-2 ml-1 pl-2 border-l border-border/60">
-              <div className="flex items-center gap-2 rounded-xl border border-indigo-500/30 bg-indigo-500/10 px-3 py-1.5 text-xs font-semibold text-indigo-300">
-                <UserCheck className="h-4 w-4 text-emerald-400 shrink-0" />
+            <div className="flex items-center gap-2 ml-1 pl-2 border-l border-slate-800">
+              <div className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/90 px-3 py-1.5 text-xs font-bold text-white shadow-sm">
+                {currentUser.photo_url ? (
+                  <img src={currentUser.photo_url} alt="Profile" className="h-5 w-5 rounded-full object-cover border border-emerald-400/50" />
+                ) : (
+                  <UserCheck className="h-4 w-4 text-emerald-400 shrink-0" />
+                )}
                 <div className="flex flex-col text-left">
-                  <span className="truncate max-w-[130px] font-bold text-foreground leading-none">
+                  <span className="truncate max-w-[120px] font-extrabold text-white leading-none">
                     {currentUser.display_name}
                   </span>
-                  <span className="truncate max-w-[130px] text-[10px] text-indigo-300 opacity-80 mt-0.5">
+                  <span className="truncate max-w-[120px] text-[10px] text-slate-400 font-mono mt-0.5">
                     {currentUser.email}
                   </span>
                 </div>
@@ -138,7 +141,7 @@ export const Navbar: React.FC = () => {
               <button
                 onClick={handleSignOut}
                 title="Sign Out"
-                className="p-2 rounded-lg border border-border text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                className="p-2 rounded-xl border border-slate-800 text-slate-400 hover:text-red-400 hover:bg-red-950/30 transition-all"
               >
                 <LogOut className="h-4 w-4" />
               </button>
@@ -146,16 +149,16 @@ export const Navbar: React.FC = () => {
           ) : (
             <Link
               to="/login"
-              className="flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium border border-indigo-500/40 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20"
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold border border-emerald-500/40 bg-emerald-950/60 text-emerald-300 hover:bg-emerald-900/80 transition-all"
             >
-              <LogIn className="h-4 w-4 text-indigo-400" />
-              <span>Sign in with Google</span>
+              <LogIn className="h-4 w-4 text-emerald-400" />
+              <span>Sign in</span>
             </Link>
           )}
 
           <Link
             to="/upload"
-            className="ml-2 inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all hover:opacity-90 hover:shadow-indigo-500/35"
+            className="ml-2 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 px-4 py-2 text-xs sm:text-sm font-black text-white shadow-lg shadow-emerald-500/25 transition-all hover:scale-105 active:scale-95"
           >
             <Mic className="h-4 w-4" />
             <span>Start Practice</span>
