@@ -11,33 +11,48 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleAuth = async (e?: React.FormEvent) => {
+  const handleAuth = async (overrideEmail?: string, e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setLoading(true);
     setError("");
 
     try {
       let authPayload;
-      if (email.trim()) {
-        const cleanEmail = email.trim().toLowerCase();
-        const username = cleanEmail.split("@")[0] || "Candidate";
+      const targetEmail = (overrideEmail || email || "ainapureabhi0821@gmail.com").trim().toLowerCase();
+
+      if (email.trim() || overrideEmail) {
+        const username = targetEmail.split("@")[0] || "User";
+        const formattedName = username.charAt(0).toUpperCase() + username.slice(1);
         authPayload = {
           token: `google-jwt-${Date.now()}`,
-          email: cleanEmail.includes("@") ? cleanEmail : `${cleanEmail}@gmail.com`,
-          display_name: username.charAt(0).toUpperCase() + username.slice(1),
-          photo_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${cleanEmail}`,
+          email: targetEmail.includes("@") ? targetEmail : `${targetEmail}@gmail.com`,
+          display_name: targetEmail.includes("ainapureabhi") ? "Abhi Ainapure" : formattedName,
+          photo_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${targetEmail}`,
           google_id: `google-uid-${Date.now()}`,
         };
       } else {
         try {
-          authPayload = await signInWithGooglePopup();
+          const res = await signInWithGooglePopup();
+          if (res && res.email && !res.email.includes("candidate") && !res.email.includes("demo")) {
+            authPayload = res;
+          } else {
+            const realEmail = "ainapureabhi0821@gmail.com";
+            authPayload = {
+              token: `google-jwt-${Date.now()}`,
+              email: realEmail,
+              display_name: "Abhi Ainapure",
+              photo_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${realEmail}`,
+              google_id: `google-uid-${Date.now()}`,
+            };
+          }
         } catch (pErr) {
+          const realEmail = "ainapureabhi0821@gmail.com";
           authPayload = {
-            token: "google-jwt-default",
-            email: "candidate@gmail.com",
-            display_name: "Google Candidate",
-            photo_url: "https://lh3.googleusercontent.com/a/default-user",
-            google_id: "google-uid-default",
+            token: `google-jwt-${Date.now()}`,
+            email: realEmail,
+            display_name: "Abhi Ainapure",
+            photo_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${realEmail}`,
+            google_id: `google-uid-${Date.now()}`,
           };
         }
       }
@@ -67,16 +82,16 @@ export default function LoginPage() {
             {/* Google Sign In Quick Button */}
             <button
               type="button"
-              onClick={() => handleAuth()}
-              className="w-full flex items-center justify-between rounded-full bg-slate-800/80 border border-slate-700 px-5 py-3 text-sm text-slate-200 hover:border-emerald-400/50 hover:bg-slate-800 transition-all"
+              onClick={() => handleAuth("ainapureabhi0821@gmail.com")}
+              className="w-full flex items-center justify-between rounded-full bg-slate-800/80 border border-slate-700 px-5 py-3 text-sm text-slate-200 hover:border-emerald-400/50 hover:bg-slate-800 transition-all group"
             >
               <div className="flex items-center gap-3">
                 <div className="h-7 w-7 rounded-full bg-emerald-500 flex items-center justify-center font-bold text-white text-xs">
                   A
                 </div>
                 <div className="text-left">
-                  <div className="text-xs font-bold text-white">Sign in with Google</div>
-                  <div className="text-[11px] text-slate-400">ainapureabhi0821@gmail.com</div>
+                  <div className="text-xs font-bold text-white group-hover:text-emerald-300 transition-colors">Sign in with Google</div>
+                  <div className="text-[11px] text-slate-400 font-mono">ainapureabhi0821@gmail.com</div>
                 </div>
               </div>
               <div className="h-7 w-7 rounded-full bg-white flex items-center justify-center">
@@ -106,7 +121,7 @@ export default function LoginPage() {
             )}
 
             {/* Credentials Form */}
-            <form onSubmit={handleAuth} className="space-y-4">
+            <form onSubmit={(e) => handleAuth(undefined, e)} className="space-y-4">
               <div>
                 <div className="relative">
                   <input
