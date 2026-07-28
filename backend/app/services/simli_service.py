@@ -12,7 +12,7 @@ class SimliService:
     def __init__(self):
         self.api_key = os.getenv("SIMLI_API_KEY", "")
         self.base_url = "https://api.simli.ai"
-        # Face IDs for Female (Riya) and Male (Abhi) personas
+        # Face IDs for Female (Riya) and Male (Rohan) personas
         self.face_ids = {
             "female": os.getenv("SIMLI_FACE_ID_FEMALE", "tmp_female_avatar_id"),
             "male": os.getenv("SIMLI_FACE_ID_MALE", "tmp_male_avatar_id"),

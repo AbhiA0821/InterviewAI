@@ -22,6 +22,7 @@ export interface TranscriptItem {
 
 export interface StartInterviewResponse {
   interview_id: number;
+  id?: number;
   target_role: string;
   status: string;
   questions: Question[];
@@ -32,9 +33,11 @@ export interface StartInterviewResponse {
 
 export interface AnswerResponse {
   interview_id: number;
+  id?: number;
   current_question_index: number;
   is_finished: boolean;
   transcript: TranscriptItem[];
+  questions?: Question[];
 }
 
 export const interviewService = {

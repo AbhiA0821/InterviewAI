@@ -73,6 +73,7 @@ def start_interview(request: StartInterviewRequest, db: Session = Depends(get_db
     db.refresh(interview)
 
     return {
+        "id": interview.id,
         "interview_id": interview.id,
         "target_role": interview.target_role,
         "status": interview.status,
@@ -106,16 +107,29 @@ def answer_question(
     )
 
     next_index = interview.current_question_index + 1
-    questions = interview.questions or []
-    is_finished = next_index >= len(questions)
+    questions_list = list(interview.questions or [])
+    total_questions = max(len(questions_list), 5)
+    is_finished = next_index >= total_questions
 
     if not is_finished:
-        followup_q = gemini_service.generate_followup_question(
-            target_role=interview.target_role,
-            interview_type="technical",
-            transcript=current_transcript,
-            next_index=next_index,
-        )
+        try:
+            followup_q = gemini_service.generate_followup_question(
+                target_role=interview.target_role or "Software Engineer",
+                interview_type="technical",
+                transcript=current_transcript,
+                next_index=next_index,
+            )
+        except Exception:
+            if next_index < len(questions_list):
+                followup_q = questions_list[next_index].get(
+                    "question",
+                    "Can you elaborate further on your experience with that?",
+                )
+            else:
+                followup_q = (
+                    "Thank you. Can you elaborate further on your key technical accomplishments?"
+                )
+
         current_transcript.append(
             {
                 "role": "interviewer",
@@ -124,6 +138,19 @@ def answer_question(
             }
         )
 
+        if questions_list and next_index < len(questions_list):
+            questions_list[next_index]["question"] = followup_q
+        else:
+            questions_list.append(
+                {
+                    "id": next_index + 1,
+                    "type": "technical",
+                    "question": followup_q,
+                    "difficulty": "Medium",
+                }
+            )
+
+        interview.questions = questions_list
         interview.current_question_index = next_index
 
     else:
@@ -142,10 +169,13 @@ def answer_question(
     db.refresh(interview)
 
     return {
+        "id": interview.id,
         "interview_id": interview.id,
         "current_question_index": interview.current_question_index,
+        "total_questions": len(interview.questions or []),
         "is_finished": is_finished,
         "transcript": interview.transcript,
+        "questions": interview.questions,
     }
 
 
@@ -296,6 +326,7 @@ def get_interview(interview_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Interview not found.")
     return {
         "id": interview.id,
+        "interview_id": interview.id,
         "target_role": interview.target_role,
         "status": interview.status,
         "questions": interview.questions,

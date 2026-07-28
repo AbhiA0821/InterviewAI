@@ -69,7 +69,7 @@ export const InterviewerAvatar: React.FC<InterviewerAvatarProps> = ({
           </span>
         </div>
 
-        {/* AI Interviewer Persona Switcher (Female HR Riya, Male Tech Lead Abhi, Male HR Lead Karan) */}
+        {/* AI Interviewer Persona Switcher (Female HR Riya, Male Tech Lead Rohan, Male HR Lead Karan) */}
         <div className="flex items-center gap-1 bg-slate-900/90 p-1 rounded-full border border-slate-800 shadow-md z-20">
           <button
             type="button"
@@ -91,9 +91,9 @@ export const InterviewerAvatar: React.FC<InterviewerAvatarProps> = ({
                 ? "bg-emerald-500 text-white shadow-sm"
                 : "text-slate-400 hover:text-white"
             }`}
-            title="Male Tech Lead (Abhi)"
+            title="Male Tech Lead (Rohan)"
           >
-            Male 1 (Abhi)
+            Male 1 (Rohan)
           </button>
           <button
             type="button"

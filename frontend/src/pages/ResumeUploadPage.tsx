@@ -15,7 +15,7 @@ export default function ResumeUploadPage() {
   const [parsedResume, setParsedResume] = useState<ParsedResume | null>(null);
 
   const [experienceLevel, setExperienceLevel] = useState<"Fresher" | "Intermediate" | "Experienced">("Fresher");
-  const [interviewerGender, setInterviewerGender] = useState<"tanya" | "riya" | "abhi">("riya");
+  const [interviewerGender, setInterviewerGender] = useState<"tanya" | "riya" | "rohan" | "abhi">("riya");
   const [targetRole, setTargetRole] = useState(roleParam);
   const [duration, setDuration] = useState("5 mins");
   const typeParam = (searchParams.get("type") as "technical" | "hr" | "non_technical") || "technical";

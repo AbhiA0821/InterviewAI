@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { interviewService, StartInterviewResponse } from "../services/interviewService";
 import { InterviewerAvatar } from "../components/interview/InterviewerAvatar";
 import { useFullscreenProctoring } from "../hooks/useFullscreen";
+import { getIndianEnglishVoice } from "../utils/voiceUtils";
 import {
   Camera,
   CameraOff,
@@ -19,6 +20,9 @@ import {
   Maximize,
   Minimize,
   AlertTriangle,
+  Video,
+  ShieldCheck,
+  LayoutGrid,
 } from "lucide-react";
 
 export default function LiveInterviewPage() {
@@ -65,7 +69,8 @@ export default function LiveInterviewPage() {
   const [timerSeconds, setTimerSeconds] = useState<number>(getSecondsFromDuration(durationParam));
   const [error, setError] = useState("");
 
-  // Controls for Floating UI
+  // Controls for Floating UI & Layout Mode
+  const [viewMode, setViewMode] = useState<"split" | "pip">("split");
   const [cameraActive, setCameraActive] = useState(true);
   const [micActive, setMicActive] = useState(true);
   const [showTranscriptDrawer, setShowTranscriptDrawer] = useState(false);
@@ -75,6 +80,8 @@ export default function LiveInterviewPage() {
   const userVideoRef = useRef<HTMLVideoElement | null>(null);
   const userMediaStreamRef = useRef<MediaStream | null>(null);
   const shouldKeepListeningRef = useRef<boolean>(false);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const ttsTimeoutRef = useRef<any>(null);
 
   // Auto-trigger proctored fullscreen mode directly on load
   useEffect(() => {
@@ -203,90 +210,52 @@ export default function LiveInterviewPage() {
 
   // Speak question with high quality, confident, loud Indian English TTS
   const speakText = (text: string) => {
+    if (ttsTimeoutRef.current) {
+      clearTimeout(ttsTimeoutRef.current);
+      ttsTimeoutRef.current = null;
+    }
     if (!("speechSynthesis" in window)) {
-      startAutoVoiceListening();
+      setAvatarStatus("listening");
+      if (micActive) startAutoVoiceListening();
       return;
     }
-    window.speechSynthesis.cancel();
+
+    try {
+      window.speechSynthesis.cancel();
+    } catch (e) {}
 
     const voices = window.speechSynthesis.getVoices();
     if (!voices || voices.length === 0) {
-      window.speechSynthesis.onvoiceschanged = () => {
-        speakText(text);
-      };
+      const timer = setTimeout(() => speakText(text), 200);
+      ttsTimeoutRef.current = timer;
       return;
     }
 
+    const finishSpeaking = () => {
+      if (ttsTimeoutRef.current) {
+        clearTimeout(ttsTimeoutRef.current);
+        ttsTimeoutRef.current = null;
+      }
+      setAvatarStatus("listening");
+      if (micActive) startAutoVoiceListening();
+    };
+
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.96; // Humanized conversational pacing
+    utteranceRef.current = utterance; // Prevent garbage collection bug in Chrome/Edge
+
+    utterance.lang = "en-IN"; // Enforce authentic Indian English phonetic synthesis
+    utterance.rate = 0.95; // Humanized conversational pacing
     utterance.volume = 1.0;
 
-    // Filter for Neural, Natural, and high-clarity human voice models
-    const naturalVoices = voices.filter((v) => {
-      const n = v.name.toLowerCase();
-      return (
-        n.includes("natural") ||
-        n.includes("neural") ||
-        n.includes("online") ||
-        n.includes("google") ||
-        n.includes("samantha") ||
-        n.includes("aria") ||
-        n.includes("jenny") ||
-        n.includes("guy") ||
-        n.includes("heera") ||
-        n.includes("prabhat") ||
-        n.includes("ravi") ||
-        n.includes("neerja")
-      );
-    });
-
-    const voicePool = naturalVoices.length > 0 ? naturalVoices : voices;
-
-    let targetVoice = null;
     if (interviewerGender === "female") {
-      utterance.pitch = 1.03; // Warm, natural human female pitch
-      targetVoice =
-        voicePool.find((v) => {
-          const n = v.name.toLowerCase();
-          return (
-            (n.includes("aria") ||
-              n.includes("jenny") ||
-              n.includes("samantha") ||
-              n.includes("heera") ||
-              n.includes("neerja") ||
-              n.includes("female") ||
-              n.includes("zira")) &&
-            !n.includes("male")
-          );
-        }) || voicePool[0];
+      utterance.pitch = 1.02; // Warm, natural human female pitch
     } else if (interviewerGender === "male2") {
       utterance.pitch = 0.98; // Professional, warm male HR manager tone
-      targetVoice =
-        voicePool.find((v) => {
-          const n = v.name.toLowerCase();
-          return (
-            n.includes("guy") ||
-            n.includes("prabhat") ||
-            n.includes("mark") ||
-            n.includes("daniel") ||
-            n.includes("male")
-          );
-        }) || voicePool[0];
     } else {
-      utterance.pitch = 0.94; // Confident, clear male AI tech lead tone
-      targetVoice =
-        voicePool.find((v) => {
-          const n = v.name.toLowerCase();
-          return (
-            n.includes("rishi") ||
-            n.includes("ravi") ||
-            n.includes("david") ||
-            n.includes("guy") ||
-            n.includes("male")
-          );
-        }) || voicePool[0];
+      utterance.pitch = 0.95; // Confident, clear male AI tech lead tone
     }
 
+    const targetVoice = getIndianEnglishVoice(voices, interviewerGender);
     if (targetVoice) {
       utterance.voice = targetVoice;
     }
@@ -300,23 +269,37 @@ export default function LiveInterviewPage() {
     };
 
     utterance.onend = () => {
-      setAvatarStatus("listening");
-      if (micActive) startAutoVoiceListening();
+      finishSpeaking();
     };
 
     utterance.onerror = () => {
-      setAvatarStatus("idle");
-      if (micActive) startAutoVoiceListening();
+      finishSpeaking();
     };
 
-    window.speechSynthesis.speak(utterance);
+    // Safety timeout: in case utterance.onend fails or hangs in browser
+    const maxDuration = Math.max(6000, (text.length / 10) * 1000 + 4000);
+    ttsTimeoutRef.current = setTimeout(() => {
+      console.warn("TTS safety timeout reached, forcing transition to listening state.");
+      finishSpeaking();
+    }, maxDuration);
+
+    try {
+      window.speechSynthesis.speak(utterance);
+    } catch (e) {
+      finishSpeaking();
+    }
   };
 
   const fetchSession = async () => {
     try {
       setLoading(true);
       const data = await interviewService.getInterview(Number(id));
-      setInterview(data);
+      const targetInterviewId = data.interview_id || (data as any).id || Number(id);
+      const updatedData: StartInterviewResponse = {
+        ...data,
+        interview_id: targetInterviewId,
+      };
+      setInterview(updatedData);
       if (data.transcript && data.transcript.length > 0) {
         const lastMsg = data.transcript[data.transcript.length - 1];
         if (lastMsg.role === "interviewer") {
@@ -332,6 +315,9 @@ export default function LiveInterviewPage() {
 
   const handleSendVoiceAnswer = async () => {
     if (!voiceTranscript.trim() || submitting || !interview) return;
+    const targetInterviewId = interview.interview_id || (interview as any).id || Number(id);
+    if (!targetInterviewId) return;
+
     shouldKeepListeningRef.current = false;
     if (recognitionRef.current) {
       try {
@@ -346,25 +332,31 @@ export default function LiveInterviewPage() {
     setVoiceTranscript("");
 
     try {
-      const res = await interviewService.answerQuestion(interview.interview_id, currentAns);
-      const updatedInterview = {
+      const res = await interviewService.answerQuestion(targetInterviewId, currentAns);
+      const updatedInterview: StartInterviewResponse = {
         ...interview,
+        interview_id: targetInterviewId,
         current_question_index: res.current_question_index,
         transcript: res.transcript,
+        questions: res.questions || interview.questions,
       };
       setInterview(updatedInterview);
 
       const lastMsg = res.transcript[res.transcript.length - 1];
       if (lastMsg && lastMsg.role === "interviewer") {
         speakText(lastMsg.text);
+      } else {
+        setAvatarStatus("listening");
+        if (micActive) startAutoVoiceListening();
       }
 
       if (res.is_finished) {
         handleFinishInterview();
       }
     } catch (err: any) {
-      setError("Failed to send answer.");
+      setError("Failed to send answer. Please try again.");
       setAvatarStatus("idle");
+      if (micActive) startAutoVoiceListening();
     } finally {
       setSubmitting(false);
     }
@@ -372,20 +364,24 @@ export default function LiveInterviewPage() {
 
   const handleFinishInterview = async () => {
     if (!interview || finishing) return;
+    const targetInterviewId = interview.interview_id || (interview as any).id || Number(id);
     setFinishing(true);
     shouldKeepListeningRef.current = false;
-    window.speechSynthesis?.cancel();
+    if (ttsTimeoutRef.current) clearTimeout(ttsTimeoutRef.current);
+    try {
+      window.speechSynthesis?.cancel();
+    } catch (e) {}
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
       } catch (e) {}
     }
     try {
-      await interviewService.finishInterview(interview.interview_id);
+      await interviewService.finishInterview(targetInterviewId);
     } catch (e) {
       console.warn("Finish interview handled:", e);
     } finally {
-      navigate(`/feedback/${interview.interview_id}`);
+      navigate(`/feedback/${targetInterviewId}`);
     }
   };
 
@@ -422,7 +418,7 @@ export default function LiveInterviewPage() {
       ? "Riya (AI HR Lead)"
       : interviewerGender === "male2"
       ? "Karan (Senior AI HR Manager)"
-      : "Abhi (AI Tech Lead)";
+      : "Rohan (AI Tech Lead)";
 
   const lastInterviewerMsg = interview.transcript
     ? [...interview.transcript].reverse().find((m) => m.role === "interviewer")
@@ -497,6 +493,16 @@ export default function LiveInterviewPage() {
 
           <button
             type="button"
+            onClick={() => setViewMode(viewMode === "split" ? "pip" : "split")}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold transition-all shadow-sm active:scale-95"
+            title="Toggle between 50/50 Split Screen and Floating PiP View"
+          >
+            <LayoutGrid className="h-3.5 w-3.5 text-emerald-400" />
+            <span>{viewMode === "split" ? "50/50 Split Screen" : "PiP Focus"}</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => navigate(`/mirror_room/${interview.interview_id}`)}
             className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-300 hover:text-white text-xs font-bold transition-all shadow-sm"
           >
@@ -552,48 +558,131 @@ export default function LiveInterviewPage() {
           </div>
         </div>
 
-        {/* CENTER STAGE: Photorealistic AI Interviewer Avatar & Floating Candidate PiP */}
-        <div className="relative flex-1 w-full min-h-0 bg-slate-950 flex items-center justify-center p-1 sm:p-2 overflow-hidden">
-          <InterviewerAvatar
-            gender={interviewerGender}
-            onGenderChange={(g) => {
-              setInterviewerGender(g);
-              localStorage.setItem("selected_gender", g);
-              window.speechSynthesis?.cancel();
-            }}
-            status={avatarStatus}
-            interviewerName={interviewerName}
-            speakingBoundaryTick={speakingBoundaryTick}
-          />
-
-          {/* Floating Candidate Picture-in-Picture (PiP) Webcam Box */}
-          <div className="absolute top-2 right-2 sm:top-3 sm:right-3 z-30 h-24 w-36 sm:h-32 sm:w-48 rounded-xl overflow-hidden border-2 border-slate-700/90 bg-slate-950 shadow-2xl transition-all group hover:border-emerald-400">
-            {cameraActive ? (
-              <video
-                ref={userVideoRef}
-                autoPlay
-                playsInline
-                muted
-                className="h-full w-full object-cover transform -scale-x-100"
+        {/* CENTER STAGE: 50/50 Split View (Half Avatar, Half Candidate Camera) or Focus PiP View */}
+        {viewMode === "split" ? (
+          <div className="relative flex-1 w-full min-h-0 bg-slate-950 p-2 sm:p-3 overflow-hidden grid grid-cols-1 md:grid-cols-2 gap-3 items-stretch">
+            {/* LEFT HALF (50%): AI Interviewer Avatar Container */}
+            <div className="h-full w-full min-h-0 relative rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 shadow-xl flex flex-col">
+              <InterviewerAvatar
+                gender={interviewerGender}
+                onGenderChange={(g) => {
+                  setInterviewerGender(g);
+                  localStorage.setItem("selected_gender", g);
+                  window.speechSynthesis?.cancel();
+                }}
+                status={avatarStatus}
+                interviewerName={interviewerName}
+                speakingBoundaryTick={speakingBoundaryTick}
               />
-            ) : (
-              <div className="h-full w-full flex flex-col items-center justify-center bg-slate-950 text-slate-500 space-y-1">
-                <CameraOff className="h-6 w-6 text-red-400" />
-                <span className="text-[10px] font-bold">Camera OFF</span>
-              </div>
-            )}
+            </div>
 
-            {/* Floating Candidate Name & Mic Badge */}
-            <div className="absolute bottom-1.5 left-1.5 right-1.5 flex items-center justify-between text-[10px] font-extrabold text-white bg-black/80 px-2 py-0.5 rounded-full border border-slate-800 backdrop-blur">
-              <span className="truncate">You (Candidate)</span>
-              {micActive ? (
-                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              ) : (
-                <MicOff className="h-3 w-3 text-red-400" />
-              )}
+            {/* RIGHT HALF (50%): Candidate Live Camera Video Feed Window */}
+            <div className="h-full w-full min-h-0 relative rounded-2xl overflow-hidden border-2 border-slate-800/90 bg-slate-950 shadow-2xl flex flex-col justify-between p-2.5 sm:p-3 transition-all group hover:border-emerald-500/50">
+              {/* Candidate Top Info Bar */}
+              <div className="flex items-center justify-between z-10 shrink-0 mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="flex items-center gap-2 text-xs font-bold text-white bg-slate-900/90 px-3 py-1.5 rounded-full border border-slate-800 shadow-md backdrop-blur">
+                    <span className={`h-2.5 w-2.5 rounded-full ${cameraActive ? "bg-emerald-400 animate-pulse" : "bg-red-500"}`} />
+                    <span>You (Candidate)</span>
+                  </span>
+                  <span className="hidden sm:flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-emerald-400 bg-emerald-950/80 px-2.5 py-1 rounded-full border border-emerald-500/40 shadow-sm">
+                    <Video className="h-3 w-3" />
+                    <span>Live HD WebCam</span>
+                  </span>
+                </div>
+
+                {/* Mic Status Badge */}
+                <div className="flex items-center gap-1.5 bg-slate-900/90 px-3 py-1 rounded-full border border-slate-800 text-xs font-bold backdrop-blur">
+                  {micActive ? (
+                    <>
+                      <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="text-emerald-400 font-extrabold text-[11px]">Mic Active</span>
+                    </>
+                  ) : (
+                    <>
+                      <MicOff className="h-3.5 w-3.5 text-red-400" />
+                      <span className="text-red-400 font-extrabold text-[11px]">Muted</span>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Video Stream Element */}
+              <div className="relative flex-1 w-full rounded-xl overflow-hidden bg-slate-950 flex items-center justify-center border border-slate-800 shadow-inner group min-h-0">
+                {cameraActive ? (
+                  <video
+                    ref={userVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="h-full w-full object-cover transform -scale-x-100"
+                  />
+                ) : (
+                  <div className="h-full w-full flex flex-col items-center justify-center bg-slate-950 text-slate-500 space-y-2">
+                    <CameraOff className="h-10 w-10 text-red-400/80 animate-pulse" />
+                    <span className="text-xs font-extrabold text-slate-400">Camera Feed Paused</span>
+                    <p className="text-[10px] text-slate-500">Click camera button in dock to enable</p>
+                  </div>
+                )}
+
+                {/* Subtle Glow Overlay */}
+                <div className="absolute inset-0 border border-emerald-500/10 pointer-events-none rounded-xl" />
+
+                {/* Bottom Video Stream Status Pills */}
+                <div className="absolute bottom-3 left-3 z-20 flex items-center gap-2 rounded-full bg-slate-950/90 border border-slate-800 px-3 py-1 text-white shadow-xl text-xs font-bold backdrop-blur">
+                  <Sparkles className="h-3.5 w-3.5 text-emerald-400 animate-pulse" />
+                  <span className="text-[11px]">AI Proctoring Active</span>
+                </div>
+
+                <div className="absolute bottom-3 right-3 z-20 hidden sm:flex items-center gap-1.5 bg-black/70 px-3 py-1 rounded-full border border-slate-800 backdrop-blur text-[10px] font-bold text-slate-300">
+                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
+                  <span>1080p HD Video</span>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="relative flex-1 w-full min-h-0 bg-slate-950 flex items-center justify-center p-1 sm:p-2 overflow-hidden">
+            <InterviewerAvatar
+              gender={interviewerGender}
+              onGenderChange={(g) => {
+                setInterviewerGender(g);
+                localStorage.setItem("selected_gender", g);
+                window.speechSynthesis?.cancel();
+              }}
+              status={avatarStatus}
+              interviewerName={interviewerName}
+              speakingBoundaryTick={speakingBoundaryTick}
+            />
+
+            {/* Floating Candidate Picture-in-Picture (PiP) Webcam Box */}
+            <div className="absolute top-2 right-2 sm:top-3 sm:right-3 z-30 h-24 w-36 sm:h-32 sm:w-48 rounded-xl overflow-hidden border-2 border-slate-700/90 bg-slate-950 shadow-2xl transition-all group hover:border-emerald-400">
+              {cameraActive ? (
+                <video
+                  ref={userVideoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="h-full w-full object-cover transform -scale-x-100"
+                />
+              ) : (
+                <div className="h-full w-full flex flex-col items-center justify-center bg-slate-950 text-slate-500 space-y-1">
+                  <CameraOff className="h-6 w-6 text-red-400" />
+                  <span className="text-[10px] font-bold">Camera OFF</span>
+                </div>
+              )}
+
+              <div className="absolute bottom-1.5 left-1.5 right-1.5 flex items-center justify-between text-[10px] font-extrabold text-white bg-black/80 px-2 py-0.5 rounded-full border border-slate-800 backdrop-blur">
+                <span className="truncate">You (Candidate)</span>
+                {micActive ? (
+                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                ) : (
+                  <MicOff className="h-3 w-3 text-red-400" />
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* BOTTOM DEDICATED LIVE ANSWER / VOICE TRANSCRIPTION BOX */}
         <div className="shrink-0 w-full bg-slate-900/95 border-t border-slate-800 p-2.5 sm:p-3 backdrop-blur z-20 shadow-lg space-y-1.5">
@@ -614,7 +703,15 @@ export default function LiveInterviewPage() {
             rows={2}
             value={voiceTranscript}
             onChange={(e) => setVoiceTranscript(e.target.value)}
-            placeholder="Speak aloud or type your response here... (Voice auto-transcribes live)"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                if (voiceTranscript.trim() && !submitting) {
+                  handleSendVoiceAnswer();
+                }
+              }
+            }}
+            placeholder="Speak aloud or type your response here... Press Enter to submit. (Voice auto-transcribes live)"
             className="w-full rounded-lg border border-slate-800 bg-slate-950 p-2 text-xs sm:text-sm text-white focus:outline-none focus:ring-1 focus:ring-emerald-400 resize-none font-medium placeholder:text-slate-500 custom-scrollbar"
           />
         </div>

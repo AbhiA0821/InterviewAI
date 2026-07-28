@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { interviewService, StartInterviewResponse } from "../services/interviewService";
 import { useFullscreenProctoring } from "../hooks/useFullscreen";
+import { getIndianEnglishVoice } from "../utils/voiceUtils";
 
 export default function MirrorRoomPage() {
   const { id } = useParams<{ id?: string }>();
@@ -149,25 +150,14 @@ export default function MirrorRoomPage() {
       const utterance = new SpeechSynthesisUtterance(
         "Welcome to the Interview AI Mirror Room. Your audio and video setup is perfectly configured and your AI interviewer voice is ready."
       );
-      utterance.rate = 0.96;
-      utterance.pitch = selectedGender === "female" ? 1.03 : 0.95;
+      utterance.lang = "en-IN";
+      utterance.rate = 0.95;
+      utterance.pitch = selectedGender === "female" ? 1.02 : 0.95;
 
       const voices = window.speechSynthesis.getVoices();
-      const naturalVoices = voices.filter((v) => {
-        const n = v.name.toLowerCase();
-        return (
-          n.includes("natural") ||
-          n.includes("neural") ||
-          n.includes("online") ||
-          n.includes("google") ||
-          n.includes("samantha") ||
-          n.includes("aria") ||
-          n.includes("guy")
-        );
-      });
-      const pool = naturalVoices.length > 0 ? naturalVoices : voices;
-      if (pool.length > 0) {
-        utterance.voice = pool[0];
+      const targetVoice = getIndianEnglishVoice(voices, selectedGender);
+      if (targetVoice) {
+        utterance.voice = targetVoice;
       }
 
       utterance.onend = () => {
@@ -415,7 +405,7 @@ export default function MirrorRoomPage() {
                 </div>
               </div>
 
-              {/* Male Persona Card (Abhi) */}
+              {/* Male Persona Card (Rohan) */}
               <div
                 onClick={() => handleGenderSelect("male")}
                 className={`relative cursor-pointer rounded-2xl border p-4 transition-all flex flex-col items-center space-y-3 ${
@@ -430,12 +420,12 @@ export default function MirrorRoomPage() {
                 <div className="h-20 w-20 rounded-full overflow-hidden border-2 border-emerald-500/60 shadow-lg">
                   <img
                     src="/avatars/male.png"
-                    alt="Abhi AI Lead"
+                    alt="Rohan AI Lead"
                     className="h-full w-full object-cover object-[center_15%]"
                   />
                 </div>
                 <div className="text-center space-y-0.5">
-                  <div className="text-sm font-extrabold text-white">Abhi</div>
+                  <div className="text-sm font-extrabold text-white">Rohan</div>
                   <div className="text-[11px] text-emerald-400 font-semibold">AI Engineering Lead (Male)</div>
                 </div>
               </div>

@@ -89,7 +89,7 @@ export default function DashboardPage() {
           <p className="text-base md:text-lg text-slate-300 font-medium leading-relaxed max-w-2xl">
             Experience face-to-face mock interview calls with AI Tech Lead{" "}
             <span className="font-bold text-emerald-300 underline decoration-emerald-500/40">Riya</span> or AI Engineer{" "}
-            <span className="font-bold text-emerald-300 underline decoration-emerald-500/40">Abhi</span>. Automatic resume parsing, device mirror room pre-check, and multi-metric scorecards.
+            <span className="font-bold text-emerald-300 underline decoration-emerald-500/40">Rohan</span>. Automatic resume parsing, device mirror room pre-check, and multi-metric scorecards.
           </p>
 
           <div className="flex flex-wrap gap-4 pt-4">

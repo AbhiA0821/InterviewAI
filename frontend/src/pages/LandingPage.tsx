@@ -65,7 +65,7 @@ export default function LandingPage() {
     {
       name: "Priya Sharma",
       role: "Software Development Engineer @ Tech Corp",
-      quote: "Interview with Abhi helped me practice full-length technical rounds with live voice feedback. The resume-driven questions were identical to my real interview!",
+      quote: "Interviewing with Rohan helped me practice full-length technical rounds with live voice feedback. The resume-driven questions were identical to my real interview!",
       rating: 5,
     },
     {
