@@ -37,8 +37,8 @@ export default function HistoryPage() {
   if (loading) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-4">
-        <Loader2 className="h-10 w-10 text-indigo-500 animate-spin" />
-        <p className="text-muted-foreground font-medium">Loading interview history...</p>
+        <Loader2 className="h-10 w-10 text-emerald-400 animate-spin" />
+        <p className="text-slate-300 font-extrabold tracking-wide text-sm">Loading interview history...</p>
       </div>
     );
   }
@@ -47,13 +47,13 @@ export default function HistoryPage() {
     <div className="max-w-4xl mx-auto space-y-8 pb-12">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Interview History</h1>
-          <p className="text-sm text-muted-foreground">Review your past practice sessions and scorecards</p>
+          <h1 className="text-3xl font-extrabold text-white tracking-tight">Interview History</h1>
+          <p className="text-sm text-slate-400 mt-1">Review your past practice sessions and scorecards</p>
         </div>
 
         <button
           onClick={() => navigate("/upload")}
-          className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition-all hover:bg-indigo-500"
+          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 px-5 py-2.5 text-xs sm:text-sm font-extrabold text-white shadow-lg shadow-emerald-500/20 transition-all"
         >
           <Mic className="h-4 w-4" />
           <span>New Practice Session</span>
@@ -61,17 +61,17 @@ export default function HistoryPage() {
       </div>
 
       {history.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-border/80 bg-card/60 p-12 text-center space-y-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-400 mx-auto">
+        <div className="rounded-3xl border border-dashed border-slate-800 bg-slate-900/60 p-12 text-center space-y-4 shadow-xl">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-950/80 border border-emerald-500/30 text-emerald-400 mx-auto">
             <History className="h-8 w-8" />
           </div>
-          <h2 className="text-xl font-bold text-foreground">No Interview Practice Yet</h2>
-          <p className="text-sm text-muted-foreground max-w-md mx-auto">
+          <h2 className="text-xl font-extrabold text-white">No Interview Practice Yet</h2>
+          <p className="text-sm text-slate-400 max-w-md mx-auto leading-relaxed">
             Start your first AI interview practice session to build confidence and receive structured feedback.
           </p>
           <button
             onClick={() => navigate("/upload")}
-            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 text-sm font-bold text-white shadow-lg transition-all hover:bg-indigo-500"
+            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-3 text-sm font-extrabold text-white shadow-lg shadow-emerald-500/25 transition-all hover:scale-105"
           >
             <span>Start Practice Interview</span>
             <ArrowRight className="h-4 w-4" />
@@ -83,26 +83,26 @@ export default function HistoryPage() {
             <div
               key={item.id}
               onClick={() => navigate(`/feedback/${item.id}`)}
-              className="group cursor-pointer rounded-2xl border border-border/80 bg-card p-5 transition-all duration-200 hover:border-indigo-500/50 hover:shadow-lg flex items-center justify-between gap-4"
+              className="group cursor-pointer rounded-2xl border border-slate-800 bg-slate-900/90 p-5 transition-all duration-200 hover:border-emerald-500/50 hover:shadow-xl flex items-center justify-between gap-4"
             >
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-lg text-foreground group-hover:text-indigo-400 transition-colors">
+                  <h3 className="font-extrabold text-lg text-white group-hover:text-emerald-400 transition-colors">
                     {item.target_role}
                   </h3>
                   <span
-                    className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                    className={`rounded-full px-2.5 py-0.5 text-xs font-extrabold uppercase ${
                       item.status === "completed"
-                        ? "bg-emerald-500/15 text-emerald-400"
-                        : "bg-amber-500/15 text-amber-400"
+                        ? "bg-emerald-950/90 text-emerald-400 border border-emerald-500/40"
+                        : "bg-amber-950/90 text-amber-400 border border-amber-500/40"
                     }`}
                   >
                     {item.status}
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Calendar className="h-3.5 w-3.5" />
+                <div className="flex items-center gap-2 text-xs text-slate-400 font-medium">
+                  <Calendar className="h-3.5 w-3.5 text-slate-400" />
                   <span>
                     {item.started_at
                       ? new Date(item.started_at).toLocaleDateString("en-US", {
@@ -117,12 +117,12 @@ export default function HistoryPage() {
 
               <div className="flex items-center gap-4 shrink-0">
                 {item.overall_score !== undefined && item.overall_score !== null && (
-                  <div className="flex items-center gap-1.5 rounded-xl border border-indigo-500/30 bg-indigo-500/10 px-3 py-1.5 text-indigo-300 font-bold text-sm">
-                    <Trophy className="h-4 w-4 text-indigo-400" />
+                  <div className="flex items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-950/80 px-3 py-1.5 text-emerald-300 font-black text-sm shadow-sm">
+                    <Trophy className="h-4 w-4 text-emerald-400" />
                     <span>{Math.round(item.overall_score)}/100</span>
                   </div>
                 )}
-                <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-indigo-400 group-hover:translate-x-1 transition-all" />
+                <ArrowRight className="h-5 w-5 text-slate-400 group-hover:text-emerald-400 group-hover:translate-x-1 transition-all" />
               </div>
             </div>
           ))}
