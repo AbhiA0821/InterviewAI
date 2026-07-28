@@ -1,4 +1,4 @@
-# InterviewAI
+# Interview with Abhi
 
 An AI-powered interview platform. Users log in with Google, upload a
 resume, select a target role, and take a live, voice-based AI

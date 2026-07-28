@@ -87,7 +87,7 @@ export default function LandingPage() {
             <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
               <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/40 bg-emerald-950/80 px-4 py-1.5 text-xs font-bold text-emerald-300 backdrop-blur">
                 <Sparkles className="h-4 w-4 text-emerald-400" />
-                <span>Next-Gen Mocklingo AI Interview Stage</span>
+                <span>Next-Gen Interview with Abhi AI Stage</span>
               </div>
 
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-white leading-[1.15]">

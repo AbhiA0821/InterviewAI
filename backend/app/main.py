@@ -19,8 +19,8 @@ from app.database.init_db import init_db
 settings = get_settings()
 
 app = FastAPI(
-    title="InterviewAI",
-    description="Unified API & Web Application for InterviewAI platform.",
+    title="Interview with Abhi",
+    description="Unified API & Web Application for Interview with Abhi platform.",
     version="1.0.0",
 )
 

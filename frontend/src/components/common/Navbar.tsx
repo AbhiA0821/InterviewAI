@@ -66,7 +66,7 @@ export const Navbar: React.FC = () => {
             <Bot className="h-5 w-5 stroke-[2.5]" />
           </div>
           <span className="bg-gradient-to-r from-white via-slate-100 to-emerald-400 bg-clip-text text-transparent font-black tracking-wide">
-            InterviewAI <span className="text-xs font-bold text-emerald-400 bg-emerald-950/90 px-2 py-0.5 rounded-full border border-emerald-500/40 ml-1">Pro</span>
+            Interview with Abhi <span className="text-xs font-bold text-emerald-400 bg-emerald-950/90 px-2 py-0.5 rounded-full border border-emerald-500/40 ml-1">Pro</span>
           </span>
         </Link>
 

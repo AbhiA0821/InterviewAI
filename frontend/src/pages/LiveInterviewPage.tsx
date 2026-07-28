@@ -396,7 +396,7 @@ export default function LiveInterviewPage() {
       <div className="min-h-screen flex flex-col items-center justify-center space-y-4 bg-slate-950 text-white">
         <Loader2 className="h-12 w-12 text-emerald-400 animate-spin" />
         <p className="text-slate-300 font-extrabold tracking-wide text-sm">
-          Connecting to Mocklingo AI Interview Deck...
+          Connecting to Interview with Abhi AI Deck...
         </p>
       </div>
     );
@@ -463,7 +463,7 @@ export default function LiveInterviewPage() {
             <h1 className="text-xs sm:text-sm font-black tracking-wider text-white flex items-center gap-2">
               <span>{interview.target_role}</span>
               <span className="hidden sm:inline-block text-[10px] font-bold text-emerald-400 bg-emerald-950/90 px-2.5 py-0.5 rounded-full border border-emerald-500/40">
-                Mocklingo AI Stage
+                Interview with Abhi Stage
               </span>
             </h1>
           </div>
