@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { interviewService, StartInterviewResponse } from "../services/interviewService";
 import { InterviewerAvatar } from "../components/interview/InterviewerAvatar";
+import { useFullscreenProctoring } from "../hooks/useFullscreen";
 import {
   Camera,
   CameraOff,
@@ -15,12 +16,23 @@ import {
   Subtitles,
   Volume2,
   Wifi,
+  Maximize,
+  Minimize,
+  AlertTriangle,
 } from "lucide-react";
 
 export default function LiveInterviewPage() {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+
+  const {
+    isFullscreen,
+    toggleFullscreen,
+    tabSwitchCount,
+    showTabWarning,
+    dismissTabWarning,
+  } = useFullscreenProctoring();
 
   const initialGender =
     (searchParams.get("gender") as any) ||
@@ -382,6 +394,30 @@ export default function LiveInterviewPage() {
 
   return (
     <div className="h-screen max-h-screen w-full bg-slate-950 text-white flex flex-col justify-between p-2 sm:p-3 relative overflow-hidden font-sans selection:bg-emerald-500/30 select-none">
+      {/* Proctoring Tab Switch Warning Overlay */}
+      {showTabWarning && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-xl rounded-2xl bg-red-950/95 border-2 border-red-500/80 p-4 text-white shadow-2xl backdrop-blur flex items-center justify-between gap-3 animate-bounce">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="h-6 w-6 text-red-400 shrink-0" />
+            <div>
+              <h4 className="text-xs font-extrabold uppercase tracking-wider text-red-300">
+                ⚠️ Proctoring Focus Alert (Switches: {tabSwitchCount})
+              </h4>
+              <p className="text-xs font-medium text-slate-200">
+                Tab switching detected! Please keep your focus on the interview screen.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={dismissTabWarning}
+            className="shrink-0 px-3 py-1 bg-red-900 hover:bg-red-800 text-xs font-bold rounded-full border border-red-700 text-white"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {/* MOCKLINGO TOP HEADER BAR */}
       <div className="flex items-center justify-between px-3 py-1.5 bg-slate-900/90 border border-slate-800 rounded-xl backdrop-blur shadow-xl z-30 shrink-0">
         <div className="flex items-center gap-3">
@@ -404,8 +440,22 @@ export default function LiveInterviewPage() {
           <span>{formatTimer(timerSeconds)} Mins</span>
         </div>
 
-        {/* Top Right Controls & Mirror Check */}
+        {/* Top Right Controls & Fullscreen Mode */}
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold transition-all border shadow-sm ${
+              isFullscreen
+                ? "bg-emerald-950/90 border-emerald-500/50 text-emerald-400"
+                : "bg-indigo-950/90 border-indigo-500/50 text-indigo-300 hover:bg-indigo-900"
+            }`}
+            title="Toggle native proctored fullscreen mode (Hides browser tabs & address bar)"
+          >
+            {isFullscreen ? <Minimize className="h-3.5 w-3.5" /> : <Maximize className="h-3.5 w-3.5" />}
+            <span className="hidden sm:inline">{isFullscreen ? "Exit Fullscreen" : "🖥️ Fullscreen Mode"}</span>
+          </button>
+
           <button
             type="button"
             onClick={() => navigate(`/mirror_room/${interview.interview_id}`)}

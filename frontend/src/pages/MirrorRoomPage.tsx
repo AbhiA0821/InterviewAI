@@ -11,12 +11,26 @@ import {
   ShieldCheck,
   VideoOff,
   MicOff,
+  Maximize,
+  Minimize,
+  AlertTriangle,
+  Lock,
 } from "lucide-react";
 import { interviewService, StartInterviewResponse } from "../services/interviewService";
+import { useFullscreenProctoring } from "../hooks/useFullscreen";
 
 export default function MirrorRoomPage() {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
+
+  const {
+    isFullscreen,
+    enterFullscreen,
+    toggleFullscreen,
+    tabSwitchCount,
+    showTabWarning,
+    dismissTabWarning,
+  } = useFullscreenProctoring();
 
   const [interview, setInterview] = useState<StartInterviewResponse | null>(null);
   const [cameraActive, setCameraActive] = useState(true);
@@ -147,7 +161,8 @@ export default function MirrorRoomPage() {
     localStorage.setItem("selected_gender", gender);
   };
 
-  const handleJoinInterview = () => {
+  const handleJoinInterview = async () => {
+    await enterFullscreen();
     const targetId = id || (interview ? interview.interview_id : null);
     if (targetId) {
       navigate(`/interview/${targetId}?gender=${selectedGender}`);
@@ -157,7 +172,31 @@ export default function MirrorRoomPage() {
   };
 
   return (
-    <div className="h-full w-full bg-slate-950 text-white p-3 sm:p-6 flex flex-col justify-between overflow-y-auto space-y-4 sm:space-y-6 custom-scrollbar">
+    <div className="h-full w-full bg-slate-950 text-white p-3 sm:p-6 flex flex-col justify-between overflow-y-auto space-y-4 sm:space-y-6 custom-scrollbar relative">
+      {/* Proctoring Tab Switch Warning Overlay */}
+      {showTabWarning && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-xl rounded-2xl bg-red-950/95 border-2 border-red-500/80 p-4 text-white shadow-2xl backdrop-blur flex items-center justify-between gap-3 animate-bounce">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="h-6 w-6 text-red-400 shrink-0" />
+            <div>
+              <h4 className="text-xs font-extrabold uppercase tracking-wider text-red-300">
+                ⚠️ Proctoring Focus Alert (Switches: {tabSwitchCount})
+              </h4>
+              <p className="text-xs font-medium text-slate-200">
+                Tab switching detected! Please remain focused on the interview window during the session.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={dismissTabWarning}
+            className="shrink-0 px-3 py-1 bg-red-900 hover:bg-red-800 text-xs font-bold rounded-full border border-red-700 text-white"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {/* Top Header */}
       <div className="max-w-6xl mx-auto w-full flex items-center justify-between border-b border-slate-800 pb-4">
         <div className="flex items-center gap-3">
@@ -177,11 +216,58 @@ export default function MirrorRoomPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 text-xs font-bold text-slate-300 bg-slate-900 px-4 py-2 rounded-full border border-slate-800">
-          <ShieldCheck className="h-4 w-4 text-emerald-400" />
-          <span>Device Check Passed</span>
+        {/* Fullscreen Proctored Mode Toggle & Device Check */}
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all border shadow-md ${
+              isFullscreen
+                ? "bg-emerald-950/90 border-emerald-500/50 text-emerald-400"
+                : "bg-indigo-950/90 border-indigo-500/50 text-indigo-300 hover:bg-indigo-900"
+            }`}
+            title="Toggle native proctored fullscreen mode (Hides browser tabs & address bar)"
+          >
+            {isFullscreen ? <Minimize className="h-3.5 w-3.5" /> : <Maximize className="h-3.5 w-3.5" />}
+            <span>{isFullscreen ? "Exit Fullscreen" : "🖥️ Fullscreen Proctored Mode"}</span>
+          </button>
+
+          <div className="hidden sm:flex items-center gap-2 text-xs font-bold text-slate-300 bg-slate-900 px-4 py-1.5 rounded-full border border-slate-800">
+            <ShieldCheck className="h-4 w-4 text-emerald-400" />
+            <span>Device Check Passed</span>
+          </div>
         </div>
       </div>
+
+      {/* Interactive Fullscreen Banner if Browser Tabs are Visible */}
+      {!isFullscreen && (
+        <div className="max-w-6xl mx-auto w-full rounded-2xl bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-950 border border-indigo-500/40 p-3 shadow-xl backdrop-blur flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-xl bg-indigo-500/20 border border-indigo-400/40 flex items-center justify-center text-indigo-400">
+              <Lock className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-white flex items-center gap-2">
+                <span>Proctored Exam Environment</span>
+                <span className="text-[10px] font-extrabold uppercase text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded-full border border-emerald-500/40">
+                  Tab-Free Mode
+                </span>
+              </p>
+              <p className="text-[11px] text-slate-300">
+                Click to enter full-screen proctored mode. This hides browser tabs, address bars, and new tab options for a clean exam environment.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={enterFullscreen}
+            className="shrink-0 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white text-xs font-black shadow-lg transition-all flex items-center gap-2"
+          >
+            <Maximize className="h-3.5 w-3.5" />
+            <span>Enter Fullscreen Stage</span>
+          </button>
+        </div>
+      )}
 
       {/* Main Grid Deck */}
       <div className="max-w-6xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-8 flex-1">
