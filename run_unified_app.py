@@ -58,7 +58,6 @@ def main():
         "0.0.0.0",
         "--port",
         "8000",
-        "--reload",
     ]
 
     subprocess.run(cmd, cwd=backend_dir)

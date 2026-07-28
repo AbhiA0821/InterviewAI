@@ -59,30 +59,26 @@ def health_check():
 # ---------------------------------------------------------------------------
 frontend_dist = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist"))
 
-if os.path.exists(frontend_dist):
-    assets_dir = os.path.join(frontend_dist, "assets")
-    if os.path.exists(assets_dir):
-        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+@app.get("/{full_path:path}")
+async def serve_spa(full_path: str):
+    # Do not intercept API calls, docs, or openapi endpoints
+    if full_path.startswith("api") or full_path in ("docs", "redoc", "openapi.json"):
+        raise HTTPException(status_code=404, detail="Route not found")
 
-    avatars_dir = os.path.join(frontend_dist, "avatars")
-    if os.path.exists(avatars_dir):
-        app.mount("/avatars", StaticFiles(directory=avatars_dir), name="avatars")
-
-    @app.get("/{full_path:path}")
-    async def serve_spa(full_path: str):
-        # Do not intercept API calls
-        if full_path.startswith("api"):
-            raise HTTPException(status_code=404, detail="API route not found")
-
+    if os.path.exists(frontend_dist):
         target_file = os.path.join(frontend_dist, full_path)
         if full_path and os.path.exists(target_file) and os.path.isfile(target_file):
             return FileResponse(target_file)
 
         index_file = os.path.join(frontend_dist, "index.html")
         if os.path.exists(index_file):
-            return FileResponse(index_file)
+            return FileResponse(index_file, headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+
+    if full_path == "" or full_path == "/":
         return {"message": "InterviewAI API is running. Build frontend dist to view full UI."}
-else:
-    @app.get("/")
-    def read_root():
-        return {"message": "InterviewAI API is running. Build frontend dist to serve full app."}
+
+    raise HTTPException(
+        status_code=404,
+        detail="Frontend build not found. Run 'npm run build' inside frontend directory to enable SPA routing."
+    )
+

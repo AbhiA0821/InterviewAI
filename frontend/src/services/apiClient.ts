@@ -14,4 +14,12 @@ export const apiClient = axios.create({
   baseURL: API_BASE_URL,
 });
 
-// TODO: add request interceptor to attach Firebase ID token
+// Automatically attach stored token to outgoing requests (survives page reloads)
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem("interviewai_token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+

@@ -18,11 +18,9 @@ function RequireAuth({ children }: { children: JSX.Element }) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
   useEffect(() => {
-    const sessionAuth = sessionStorage.getItem("google_authenticated");
     const token = localStorage.getItem("interviewai_token");
 
-    // Force Google Authentication screen on fresh session launch
-    if (!sessionAuth || !token) {
+    if (!token) {
       setIsAuthenticated(false);
       return;
     }
@@ -30,7 +28,12 @@ function RequireAuth({ children }: { children: JSX.Element }) {
     authService
       .getCurrentUser()
       .then((user) => {
-        setIsAuthenticated(user.authenticated);
+        if (user && user.authenticated) {
+          sessionStorage.setItem("google_authenticated", "true");
+          setIsAuthenticated(true);
+        } else {
+          setIsAuthenticated(false);
+        }
       })
       .catch(() => {
         setIsAuthenticated(false);
