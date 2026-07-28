@@ -12,14 +12,94 @@ settings = get_settings()
 
 class GeminiService:
     def __init__(self):
-        self.api_key = settings.GEMINI_API_KEY
-        self.model_name = settings.GEMINI_MODEL or "gemini-2.0-flash"
-        self.client = None
-        if self.api_key and not self.api_key.startswith("your-"):
+        self.model_name = settings.GEMINI_MODEL or "gemini-1.5-flash"
+        self.api_keys: List[str] = settings.get_all_gemini_api_keys()
+        self.current_key_index: int = 0
+        self.clients: Dict[str, Any] = {}
+
+        if self.api_keys:
+            logger.info(
+                f"[GeminiService] Initialized with {len(self.api_keys)} Gemini API key(s) for automatic rotation & rate-limit fallback."
+            )
+            self._init_clients()
+        else:
+            logger.warning(
+                "[GeminiService] No valid Gemini API keys found. Gemini calls will fall back to local AI generators."
+            )
+
+    def is_configured(self) -> bool:
+        """Check if at least one valid Gemini API key is present."""
+        return len(self.api_keys) > 0
+
+    def reload_keys(self) -> None:
+        """Reload API keys dynamically from settings/env."""
+        self.api_keys = settings.get_all_gemini_api_keys()
+        self.current_key_index = 0
+        self._init_clients()
+
+    def _init_clients(self) -> None:
+        """Initialize genai.Client instances for all loaded API keys."""
+        self.clients = {}
+        for key in self.api_keys:
             try:
-                self.client = genai.Client(api_key=self.api_key)
+                self.clients[key] = genai.Client(api_key=key)
             except Exception as e:
-                logger.warning(f"Could not initialize Gemini Client: {e}")
+                logger.warning(f"[GeminiService] Could not initialize genai.Client for key ending in ...{key[-6:]}: {e}")
+
+    def _generate_content_with_rotation(self, prompt: str) -> str:
+        """
+        Execute Gemini generate_content call with automatic multi-key rotation.
+        If an API key hits rate limits (HTTP 429), quota limits, or errors, it immediately
+        rotates to the next available API key in the key pool.
+        """
+        # Always sync keys in case new ones were added to env
+        current_keys = settings.get_all_gemini_api_keys()
+        if set(current_keys) != set(self.api_keys):
+            self.api_keys = current_keys
+            self._init_clients()
+
+        if not self.api_keys:
+            logger.warning("[GeminiService] No API keys available for content generation.")
+            return ""
+
+        num_keys = len(self.api_keys)
+        start_index = self.current_key_index
+
+        for attempt in range(num_keys):
+            key_index = (start_index + attempt) % num_keys
+            api_key = self.api_keys[key_index]
+            key_snippet = f"...{api_key[-6:]}" if len(api_key) > 6 else "key"
+
+            client = self.clients.get(api_key)
+            if not client:
+                try:
+                    client = genai.Client(api_key=api_key)
+                    self.clients[api_key] = client
+                except Exception as e:
+                    logger.warning(f"[GeminiService] Error initializing client for key {key_snippet}: {e}")
+                    continue
+
+            try:
+                logger.info(
+                    f"[GeminiService] Using Gemini API Key [{key_index + 1}/{num_keys}] ({key_snippet}) for generation."
+                )
+                response = client.models.generate_content(
+                    model=self.model_name,
+                    contents=prompt,
+                )
+                if response and hasattr(response, "text") and response.text:
+                    # Update current_key_index for round-robin balancing across future requests
+                    self.current_key_index = (key_index + 1) % num_keys
+                    return response.text.strip()
+                else:
+                    logger.warning(f"[GeminiService] Key {key_snippet} returned empty response. Trying next key...")
+            except Exception as e:
+                logger.warning(
+                    f"[GeminiService] API key [{key_index + 1}/{num_keys}] ({key_snippet}) failed or hit rate limit ({e}). Auto-rotating to next key..."
+                )
+
+        logger.error(f"[GeminiService] All {num_keys} Gemini API keys failed or hit rate limits.")
+        return ""
 
     def generate_interview_questions(
         self,
@@ -28,7 +108,7 @@ class GeminiService:
         interview_type: str = "technical",
         num_questions: int = 5,
     ) -> List[Dict[str, Any]]:
-        """Generate questions tailored to target role/engineering branch and interview mode (HR, Technical, Non-Technical)."""
+        """Generate questions tailored to target role and interview mode with automatic key rotation."""
         prompt = f"""
 You are an expert interviewer conducting a '{interview_type.upper()}' interview for the role of '{target_role}'.
 Candidate Resume Content:
@@ -50,19 +130,16 @@ Return a valid JSON array of objects, where each object has:
 
 Respond ONLY with valid JSON array, no markdown codeblocks or extra text.
 """
-        if self.client:
+        text = self._generate_content_with_rotation(prompt)
+        if text:
             try:
-                response = self.client.models.generate_content(
-                    model=self.model_name, contents=prompt
-                )
-                text = response.text.strip()
                 if text.startswith("```"):
                     text = text.split("\n", 1)[1].rsplit("\n", 1)[0].strip()
                 return json.loads(text)
             except Exception as e:
-                logger.error(f"Gemini API error generating questions: {e}")
+                logger.error(f"Gemini API JSON parsing error: {e}")
 
-        # Intelligent Fallback questions tailored to interview_type & engineering branch
+        # Intelligent Fallback questions tailored to interview_type
         if interview_type == "hr":
             return [
                 {
@@ -163,7 +240,6 @@ Respond ONLY with valid JSON array, no markdown codeblocks or extra text.
                 },
             ]
 
-
     def generate_followup_question(
         self,
         target_role: str,
@@ -171,7 +247,7 @@ Respond ONLY with valid JSON array, no markdown codeblocks or extra text.
         transcript: List[Dict[str, str]],
         next_index: int,
     ) -> str:
-        """Generate a contextual, adaptive follow-up question based on the candidate's last voice response."""
+        """Generate a contextual, adaptive follow-up question using API key rotation."""
         last_answer = ""
         for t in reversed(transcript):
             if t.get("role") == "user":
@@ -188,31 +264,61 @@ Acknowledge key points of their response and probe deeper into their technical r
 
 Respond ONLY with the follow-up question text.
 """
-        if self.client:
-            try:
-                response = self.client.models.generate_content(
-                    model=self.model_name, contents=prompt
-                )
-                text = response.text.strip()
-                if text:
-                    return text
-            except Exception as e:
-                logger.error(f"Gemini API error generating follow-up: {e}")
+        text = self._generate_content_with_rotation(prompt)
+        if text:
+            return text
 
         # Intelligent Fallback context-aware follow-up
         if last_answer:
             return f"That's insightful. Regarding what you mentioned about your approach, can you elaborate on the key challenges or metrics you encountered while executing that?"
         return "Can you elaborate further on your experience with that?"
 
-
     def evaluate_interview(
         self, target_role: str, transcript: List[Dict[str, str]]
     ) -> Dict[str, Any]:
-        """Evaluate full interview transcript and generate candidate-specific scores & feedback."""
+        """Evaluate full interview transcript and generate scores & feedback using API key rotation."""
+        placeholders = {
+            "[no answer provided]", "n/a", "pass", "skip", "none", "?", "...",
+            "i don't know", "idk"
+        }
+        valid_user_texts = []
+        for t in (transcript or []):
+            if t.get("role") == "user":
+                raw_text = t.get("text", "").strip()
+                clean_text = raw_text.lower().strip(" .,!?")
+                if raw_text and clean_text not in placeholders:
+                    valid_user_texts.append(raw_text)
+
+        combined_text = " ".join(valid_user_texts).lower()
+        word_count = len(combined_text.split())
+
+        if not valid_user_texts or word_count < 5:
+            logger.info("[GeminiService] Candidate provided 0/insufficient valid answers. Returning incomplete interview evaluation.")
+            return {
+                "overall_score": 0.0,
+                "communication_score": 0.0,
+                "technical_score": 0.0,
+                "problem_solving_score": 0.0,
+                "confidence_score": 0.0,
+                "strengths": [
+                    "Session initiated."
+                ],
+                "areas_for_improvement": [
+                    "Attempt all interview questions and provide spoken or written answers to receive a performance evaluation."
+                ],
+                "detailed_report": {
+                    "summary": f"The candidate started the interview session for {target_role} but left without providing valid answers.",
+                    "key_takeaway": "Session left incomplete / abandoned.",
+                    "recommendation": "Incomplete / Abandoned",
+                },
+            }
+
         prompt = f"""
 You are a Principal Technical Interviewer evaluating a candidate's actual interview answers for '{target_role}'.
 Analyze the following interview transcript in detail:
 {json.dumps(transcript, indent=2)}
+
+CRITICAL: If the candidate provided no answers, very brief answers (under 5 words total), or left the session early, assign overall_score = 0.0 and recommendation = "Incomplete / Abandoned".
 
 Evaluate the candidate across 4 core dimensions (0-100 scale):
 1. "technical_score": Technical knowledge, accuracy, and engineering depth.
@@ -240,29 +346,40 @@ Return ONLY a JSON object formatted as:
   "detailed_report": {{
     "summary": "Detailed overall candidate performance summary",
     "key_takeaway": "Key evaluation takeaway",
-    "recommendation": "Strong Hire" | "Hire" | "Needs Improvement" | "Reject"
+    "recommendation": "Strong Hire" | "Hire" | "Needs Improvement" | "Reject" | "Incomplete / Abandoned"
   }}
 }}
 Respond ONLY with valid JSON.
 """
-        if self.client:
+        text = self._generate_content_with_rotation(prompt)
+        if text:
             try:
-                response = self.client.models.generate_content(
-                    model=self.model_name, contents=prompt
-                )
-                text = response.text.strip()
                 if text.startswith("```"):
                     text = text.split("\n", 1)[1].rsplit("\n", 1)[0].strip()
                 parsed = json.loads(text)
                 if "overall_score" in parsed and "technical_score" in parsed:
                     return parsed
             except Exception as e:
-                logger.error(f"Gemini API error evaluating interview: {e}")
+                logger.error(f"Gemini API evaluation parsing error: {e}")
 
-        # Smart Transcript Text Signal Analyzer
-        user_texts = [t.get("text", "").strip() for t in transcript if t.get("role") == "user" and t.get("text")]
-        combined_text = " ".join(user_texts).lower()
-        word_count = len(combined_text.split())
+        # Smart Transcript Text Signal Analyzer (Fallback when Gemini API is unavailable)
+        if not valid_user_texts or word_count < 10:
+            return {
+                "overall_score": 0.0,
+                "communication_score": 0.0,
+                "technical_score": 0.0,
+                "problem_solving_score": 0.0,
+                "confidence_score": 0.0,
+                "strengths": ["Session attempted with minimal input."],
+                "areas_for_improvement": [
+                    "Provide detailed, comprehensive answers with technical depth and examples to receive a complete evaluation score."
+                ],
+                "detailed_report": {
+                    "summary": f"The candidate attempted the practice interview for {target_role} but provided insufficient response depth.",
+                    "key_takeaway": "Insufficient answers provided for automated technical evaluation.",
+                    "recommendation": "Incomplete / Abandoned",
+                },
+            }
 
         # 1. Technical Knowledge Signals
         tech_keywords = [
@@ -271,20 +388,22 @@ Respond ONLY with valid JSON.
             "framework", "testing", "optimization", "security", "git", "class", "function"
         ]
         tech_hits = sum(1 for kw in tech_keywords if kw in combined_text)
-        tech_score = min(96.0, max(60.0, 70.0 + (tech_hits * 3.5)))
+        depth_factor = min(1.0, word_count / 80.0)
+        tech_score = round(min(95.0, (40.0 + (tech_hits * 5.0)) * depth_factor), 1)
 
-        # 2. Problem Solving & Analytical Non-Tech Signals
+        # 2. Problem Solving & Analytical Signals
         problem_keywords = [
             "because", "therefore", "analyzed", "prioritized", "result", "framework",
             "metrics", "tradeoff", "solved", "resolved", "strategy", "impact", "handled",
             "decision", "approach", "evaluating", "alternative", "issue", "root cause"
         ]
         problem_hits = sum(1 for kw in problem_keywords if kw in combined_text)
-        problem_solving_score = min(97.0, max(62.0, 72.0 + (problem_hits * 3.0)))
+        problem_solving_score = round(min(95.0, (42.0 + (problem_hits * 4.5)) * depth_factor), 1)
 
         # 3. Communication Score
-        avg_words_per_ans = word_count / max(len(user_texts), 1)
-        comm_score = min(98.0, max(65.0, 74.0 + (avg_words_per_ans / 4.0)))
+        avg_words_per_ans = word_count / max(len(valid_user_texts), 1)
+        comm_base = min(90.0, 45.0 + (avg_words_per_ans * 1.2))
+        comm_score = round(min(95.0, comm_base * depth_factor), 1)
 
         # 4. Confidence Score
         confidence_keywords = [
@@ -292,7 +411,7 @@ Respond ONLY with valid JSON.
             "confident", "mastered", "implemented", "managed", "delivered", "sure"
         ]
         confidence_hits = sum(1 for kw in confidence_keywords if kw in combined_text)
-        confidence_score = min(96.0, max(64.0, 73.0 + (confidence_hits * 3.2)))
+        confidence_score = round(min(95.0, (44.0 + (confidence_hits * 4.5)) * depth_factor), 1)
 
         # Overall Score
         overall_score = round(
@@ -300,32 +419,106 @@ Respond ONLY with valid JSON.
             1
         )
 
-        recommendation = "Strong Hire" if overall_score >= 85 else ("Hire" if overall_score >= 74 else "Needs Improvement")
+        recommendation = (
+            "Strong Hire" if overall_score >= 85
+            else ("Hire" if overall_score >= 70
+            else ("Needs Improvement" if overall_score >= 40 else "Incomplete / Abandoned"))
+        )
 
         return {
             "overall_score": overall_score,
-            "communication_score": round(comm_score, 1),
-            "technical_score": round(tech_score, 1),
-            "problem_solving_score": round(problem_solving_score, 1),
-            "confidence_score": round(confidence_score, 1),
+            "communication_score": comm_score,
+            "technical_score": tech_score,
+            "problem_solving_score": problem_solving_score,
+            "confidence_score": confidence_score,
             "strengths": [
-                f"Demonstrated good baseline technical knowledge for {target_role}.",
-                "Provided structured answers with analytical problem-solving signals.",
-                "Maintained calm composure and articulate communication during voice interaction.",
+                f"Demonstrated baseline engagement for {target_role}.",
+                "Provided responses to technical interview questions.",
             ],
             "areas_for_improvement": [
-                "Include deeper architectural metrics and trade-off comparisons.",
-                "Elaborate with specific quantitative results (e.g. latency improvement, scale).",
-                "Structure technical responses using a clear problem-solution framework.",
+                "Include deeper technical specifics and architectural trade-offs.",
+                "Elaborate with specific quantitative results and metrics.",
             ],
             "detailed_report": {
-                "summary": f"The candidate completed the practice interview for {target_role} with strong overall performance.",
-                "key_takeaway": f"Solid proficiency across technical ({round(tech_score)}%) and analytical problem solving ({round(problem_solving_score)}%).",
+                "summary": f"The candidate completed the practice interview for {target_role}.",
+                "key_takeaway": f"Performance score: {overall_score}%.",
                 "recommendation": recommendation,
             },
         }
 
+    def analyze_resume(self, resume_text: str) -> Dict[str, Any]:
+        """Analyze resume text and extract domain, skills, projects, education using Gemini multi-key rotation."""
+        prompt = (
+            "You are an expert HR & Technical Talent Analyzer. Analyze the candidate resume text below.\n\n"
+            "Return ONLY a valid JSON object with keys:\n"
+            '- "domain": String (e.g., "Software Engineer", "Data Analyst", "Civil Engineer", "Mechanical Engineer")\n'
+            '- "experience_level": "Fresher" | "Intermediate" | "Experienced"\n'
+            '- "skills": List of extracted technical/domain skills (strings)\n'
+            '- "projects": List of project titles/descriptions extracted (strings)\n'
+            '- "education": Summary of education\n'
+            '- "certifications": List of certifications\n\n'
+            f"Resume Text:\n{resume_text[:4000]}\n\n"
+            "Respond ONLY with valid JSON, no markdown codeblocks or extra commentary."
+        )
+        text = self._generate_content_with_rotation(prompt)
+        if text:
+            try:
+                content = text
+                if content.startswith("```json"):
+                    content = content[7:]
+                if content.startswith("```"):
+                    content = content[3:]
+                if content.endswith("```"):
+                    content = content[:-3]
+                parsed = json.loads(content.strip())
+                if isinstance(parsed, dict):
+                    return parsed
+            except Exception as e:
+                logger.warning(f"[GeminiService] Error parsing resume JSON: {e}")
+
+        return {
+            "domain": "Software Engineer",
+            "experience_level": "Intermediate",
+            "skills": ["Software Engineering", "Problem Solving"],
+            "projects": ["General Project Experience"],
+            "education": "Bachelor's Degree",
+            "certifications": [],
+        }
+
+    def auto_detect_domain(self, resume_text: str) -> str:
+        """Infer target domain/role from candidate resume using Gemini multi-key rotation."""
+        analysis = self.analyze_resume(resume_text)
+        return analysis.get("domain", "Full Stack Software Engineer")
+
+    def evaluate_answer_and_generate_next(
+        self,
+        interview_id: int,
+        current_question: str,
+        user_answer: str,
+        history: List[Dict[str, str]],
+        target_role: str,
+    ) -> Dict[str, Any]:
+        """Evaluate candidate answer and generate follow-up using Gemini multi-key rotation."""
+        prompt = (
+            f"You are the AI Interviewer for role '{target_role}'.\n"
+            f"Current Question asked: {current_question}\n"
+            f"Candidate Spoken Answer: {user_answer}\n\n"
+            "Acknowledge the candidate's answer constructively in 1-2 polite, natural human sentences, and ask a relevant technical/HR follow-up question. "
+            "Respond ONLY with the text to speak aloud to the candidate."
+        )
+        response_text = self._generate_content_with_rotation(prompt)
+        if not response_text:
+            response_text = f"Thank you for sharing. Building on your answer, could you detail how you handle code reviews and testing in your workflow for {target_role}?"
+        return {"next_question": response_text}
+
+    def generate_feedback_report(
+        self,
+        target_role: str,
+        transcript: List[Dict[str, str]],
+        questions: List[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """Generate comprehensive interview feedback report using Gemini multi-key rotation."""
+        return self.evaluate_interview(target_role=target_role, transcript=transcript or [])
 
 
 gemini_service = GeminiService()
-

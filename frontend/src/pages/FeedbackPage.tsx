@@ -53,8 +53,11 @@ export default function FeedbackPage() {
   const getScoreColor = (score: number) => {
     if (score >= 85) return "text-emerald-400 bg-emerald-950/80 border-emerald-500/50";
     if (score >= 70) return "text-teal-300 bg-teal-950/80 border-teal-500/50";
-    return "text-amber-400 bg-amber-950/80 border-amber-500/50";
+    if (score >= 40) return "text-amber-400 bg-amber-950/80 border-amber-500/50";
+    return "text-red-400 bg-red-950/80 border-red-500/50";
   };
+
+  const isIncomplete = report.overall_score === 0 || report.detailed_report?.recommendation?.includes("Incomplete");
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-12">
@@ -96,12 +99,20 @@ export default function FeedbackPage() {
       </div>
 
       {/* Main Score & Recommendation Banner */}
-      <div className="rounded-3xl border border-slate-800 bg-gradient-to-r from-slate-900 via-slate-950 to-emerald-950/40 p-8 shadow-2xl relative overflow-hidden">
+      <div className={`rounded-3xl border p-8 shadow-2xl relative overflow-hidden ${
+        isIncomplete
+          ? "border-amber-500/40 bg-gradient-to-r from-slate-900 via-slate-950 to-amber-950/40"
+          : "border-slate-800 bg-gradient-to-r from-slate-900 via-slate-950 to-emerald-950/40"
+      }`}>
         <div className="flex flex-col md:flex-row items-center justify-between gap-8">
           <div className="space-y-3 text-center md:text-left">
-            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/40 bg-emerald-950/90 px-3.5 py-1 text-xs font-extrabold text-emerald-300 backdrop-blur">
-              <Award className="h-4 w-4 text-emerald-400" />
-              <span>Recommendation: {report.detailed_report?.recommendation || "Hire"}</span>
+            <div className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1 text-xs font-extrabold backdrop-blur ${
+              isIncomplete
+                ? "border-amber-500/40 bg-amber-950/90 text-amber-300"
+                : "border-emerald-500/40 bg-emerald-950/90 text-emerald-300"
+            }`}>
+              <Award className={`h-4 w-4 ${isIncomplete ? "text-amber-400" : "text-emerald-400"}`} />
+              <span>Recommendation: {report.detailed_report?.recommendation || (isIncomplete ? "Incomplete / Abandoned" : "Needs Improvement")}</span>
             </div>
 
             <h2 className="text-2xl font-black text-white">
@@ -109,15 +120,19 @@ export default function FeedbackPage() {
             </h2>
             <p className="text-sm text-slate-300 max-w-xl font-medium leading-relaxed">
               {report.detailed_report?.summary ||
-                "Solid overall presentation with clear structure and technical awareness."}
+                "No evaluation summary available."}
             </p>
           </div>
 
           <div className="flex flex-col items-center justify-center shrink-0">
-            <div className="flex h-32 w-32 items-center justify-center rounded-full border-4 border-emerald-500/50 bg-emerald-950/60 shadow-2xl shadow-emerald-500/20">
-              <span className="text-4xl font-black text-emerald-300">
-                {Math.round(report.overall_score)}
-                <span className="text-lg text-emerald-400/80">/100</span>
+            <div className={`flex h-32 w-32 items-center justify-center rounded-full border-4 shadow-2xl ${
+              isIncomplete
+                ? "border-amber-500/50 bg-amber-950/60 shadow-amber-500/20 text-amber-300"
+                : "border-emerald-500/50 bg-emerald-950/60 shadow-emerald-500/20 text-emerald-300"
+            }`}>
+              <span className="text-4xl font-black">
+                {Math.round(report.overall_score ?? 0)}
+                <span className={`text-lg ${isIncomplete ? "text-amber-400/80" : "text-emerald-400/80"}`}>/100</span>
               </span>
             </div>
           </div>
@@ -127,10 +142,10 @@ export default function FeedbackPage() {
       {/* Category Metric Breakdown */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { title: "Technical Skills", score: report.technical_score ?? 80, icon: Cpu },
-          { title: "Communication", score: report.communication_score ?? 85, icon: MessageSquare },
-          { title: "Problem Solving", score: report.problem_solving_score ?? 82, icon: Lightbulb },
-          { title: "Confidence", score: report.confidence_score ?? 88, icon: Trophy },
+          { title: "Technical Skills", score: report.technical_score ?? 0, icon: Cpu },
+          { title: "Communication", score: report.communication_score ?? 0, icon: MessageSquare },
+          { title: "Problem Solving", score: report.problem_solving_score ?? 0, icon: Lightbulb },
+          { title: "Confidence", score: report.confidence_score ?? 0, icon: Trophy },
         ].map((metric) => {
           const Icon = metric.icon;
           return (
@@ -139,7 +154,7 @@ export default function FeedbackPage() {
               className="rounded-2xl border border-slate-800 bg-slate-900/90 p-5 space-y-3 shadow-xl"
             >
               <div className="flex items-center justify-between">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-950/80 border border-emerald-500/30 text-emerald-400">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-950 border border-slate-800 text-slate-300">
                   <Icon className="h-5 w-5" />
                 </div>
                 <span
@@ -154,8 +169,12 @@ export default function FeedbackPage() {
                 <h3 className="text-xs font-bold text-slate-400">{metric.title}</h3>
                 <div className="w-full bg-slate-950 h-2.5 rounded-full mt-2 overflow-hidden border border-slate-800 p-0.5">
                   <div
-                    className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-full transition-all duration-500"
-                    style={{ width: `${Math.min(100, Math.max(10, metric.score))}%` }}
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      metric.score > 0
+                        ? "bg-gradient-to-r from-emerald-500 to-teal-400"
+                        : "bg-slate-700"
+                    }`}
+                    style={{ width: `${Math.min(100, Math.max(0, metric.score))}%` }}
                   />
                 </div>
               </div>

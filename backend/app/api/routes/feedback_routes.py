@@ -17,13 +17,39 @@ def get_feedback(interview_id: int, db: Session = Depends(get_db)):
     feedback = db.query(Feedback).filter(Feedback.interview_id == interview_id).first()
     interview = db.query(Interview).filter(Interview.id == interview_id).first()
 
+    placeholders = {
+        "[no answer provided]", "n/a", "pass", "skip", "none", "?", "...",
+        "i don't know", "idk"
+    }
+    user_texts = [
+        t.get("text", "").strip()
+        for t in ((interview.transcript if interview else []) or [])
+        if t.get("role") == "user"
+        and t.get("text", "").strip()
+        and t.get("text", "").strip().lower() not in placeholders
+    ]
+    has_valid_answers = len(user_texts) > 0 and len(" ".join(user_texts).split()) >= 5
+
+    if feedback and not has_valid_answers and feedback.overall_score > 0:
+        feedback.overall_score = 0.0
+        feedback.communication_score = 0.0
+        feedback.technical_score = 0.0
+        feedback.problem_solving_score = 0.0
+        feedback.confidence_score = 0.0
+        feedback.detailed_report = {
+            "summary": f"The candidate started the interview session for {interview.target_role if interview else 'practice'} but left without providing valid answers.",
+            "key_takeaway": "Session left incomplete / abandoned.",
+            "recommendation": "Incomplete / Abandoned",
+        }
+        db.commit()
+
     if not feedback:
         if not interview:
             raise HTTPException(status_code=404, detail="Interview session not found.")
 
-        # Generate evaluation report using Groq AI Service
+        # Generate evaluation report using Gemini Service multi-key pool
         try:
-            eval_data = ai_service.generate_feedback_report(
+            eval_data = gemini_service.generate_feedback_report(
                 target_role=interview.target_role,
                 transcript=interview.transcript or [],
                 questions=interview.questions or [],
@@ -37,26 +63,27 @@ def get_feedback(interview_id: int, db: Session = Depends(get_db)):
             except (ValueError, TypeError):
                 return default
 
+        default_score = 0.0 if not has_valid_answers else 50.0
+
         feedback = Feedback(
             interview_id=interview.id,
-            overall_score=safe_float(eval_data.get("overall_score"), 82.0),
-            communication_score=safe_float(eval_data.get("communication_score"), 85.0),
-            technical_score=safe_float(eval_data.get("technical_score"), 80.0),
-            problem_solving_score=safe_float(eval_data.get("problem_solving_score"), 84.0),
-            confidence_score=safe_float(eval_data.get("confidence_score"), 86.0),
-            strengths=eval_data.get("strengths") or [
-                "Clear communication and articulate explanation of engineering principles.",
-                f"Demonstrated solid domain foundation for {interview.target_role}.",
-                "Maintained structured and confident delivery during voice interaction.",
-            ],
+            overall_score=safe_float(eval_data.get("overall_score"), default_score),
+            communication_score=safe_float(eval_data.get("communication_score"), default_score),
+            technical_score=safe_float(eval_data.get("technical_score"), default_score),
+            problem_solving_score=safe_float(eval_data.get("problem_solving_score"), default_score),
+            confidence_score=safe_float(eval_data.get("confidence_score"), default_score),
+            strengths=eval_data.get("strengths") or (
+                ["Session initiated."] if not has_valid_answers else ["Attempted practice interview."]
+            ),
             areas_for_improvement=eval_data.get("areas_for_improvement") or [
-                "Include more quantitative metrics and performance benchmarks in technical answers.",
-                "Detail system design trade-offs and edge case handling.",
-                "Structure scenario responses using the STAR (Situation, Task, Action, Result) method.",
+                "Attempt all interview questions and provide spoken or written answers to receive a performance evaluation."
             ],
             detailed_report=eval_data.get("detailed_report") or {
-                "summary": f"Solid overall performance during the {interview.target_role} AI practice session.",
-                "recommendation": "Strong Hire",
+                "summary": f"The candidate started the interview session for {interview.target_role} but left without providing valid answers."
+                if not has_valid_answers
+                else f"Practice session completed for {interview.target_role}.",
+                "key_takeaway": "Session left incomplete / abandoned." if not has_valid_answers else "Practice session completed.",
+                "recommendation": "Incomplete / Abandoned" if not has_valid_answers else "Needs Improvement",
             },
             created_at=datetime.utcnow(),
         )

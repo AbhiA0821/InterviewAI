@@ -218,51 +218,73 @@ export default function LiveInterviewPage() {
     }
 
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.98; // Clear, confident HR pacing
-    utterance.volume = 1.0; // Loud and clear
-    utterance.lang = "en-IN"; // Strict Indian English
+    utterance.rate = 0.96; // Humanized conversational pacing
+    utterance.volume = 1.0;
 
-    const indianVoices = voices.filter(
-      (v) =>
-        v.lang.includes("IN") ||
-        v.lang.includes("in") ||
-        v.name.toLowerCase().includes("india") ||
-        v.name.toLowerCase().includes("hindi") ||
-        v.name.toLowerCase().includes("heera") ||
-        v.name.toLowerCase().includes("ravi") ||
-        v.name.toLowerCase().includes("veena") ||
-        v.name.toLowerCase().includes("neerja") ||
-        v.name.toLowerCase().includes("prabhat")
-    );
+    // Filter for Neural, Natural, and high-clarity human voice models
+    const naturalVoices = voices.filter((v) => {
+      const n = v.name.toLowerCase();
+      return (
+        n.includes("natural") ||
+        n.includes("neural") ||
+        n.includes("online") ||
+        n.includes("google") ||
+        n.includes("samantha") ||
+        n.includes("aria") ||
+        n.includes("jenny") ||
+        n.includes("guy") ||
+        n.includes("heera") ||
+        n.includes("prabhat") ||
+        n.includes("ravi") ||
+        n.includes("neerja")
+      );
+    });
+
+    const voicePool = naturalVoices.length > 0 ? naturalVoices : voices;
 
     let targetVoice = null;
     if (interviewerGender === "female") {
-      // Authoritative, confident, loud & clear female HR lead tone
-      utterance.pitch = 1.05;
+      utterance.pitch = 1.03; // Warm, natural human female pitch
       targetVoice =
-        indianVoices.find((v) => {
+        voicePool.find((v) => {
           const n = v.name.toLowerCase();
-          return n.includes("heera") || n.includes("veena") || n.includes("neerja") || n.includes("female");
-        }) ||
-        (indianVoices.length > 0 ? indianVoices[0] : null) ||
-        voices.find((v) => v.lang.startsWith("en") && (v.name.toLowerCase().includes("female") || v.name.toLowerCase().includes("zira"))) ||
-        voices[0];
+          return (
+            (n.includes("aria") ||
+              n.includes("jenny") ||
+              n.includes("samantha") ||
+              n.includes("heera") ||
+              n.includes("neerja") ||
+              n.includes("female") ||
+              n.includes("zira")) &&
+            !n.includes("male")
+          );
+        }) || voicePool[0];
     } else if (interviewerGender === "male2") {
-      // Loud, confident, clear Senior Male HR Manager tone
-      utterance.pitch = 1.02;
+      utterance.pitch = 0.98; // Professional, warm male HR manager tone
       targetVoice =
-        indianVoices.find((v) => v.name.toLowerCase().includes("prabhat") || v.name.toLowerCase().includes("ravi") || v.name.toLowerCase().includes("male")) ||
-        (indianVoices.length > 0 ? indianVoices[0] : null) ||
-        voices.find((v) => v.name.toLowerCase().includes("mark") || v.name.toLowerCase().includes("male")) ||
-        voices[0];
+        voicePool.find((v) => {
+          const n = v.name.toLowerCase();
+          return (
+            n.includes("guy") ||
+            n.includes("prabhat") ||
+            n.includes("mark") ||
+            n.includes("daniel") ||
+            n.includes("male")
+          );
+        }) || voicePool[0];
     } else {
-      // Loud, confident, clear Male AI Tech Lead tone (male1 or male)
-      utterance.pitch = 0.92;
+      utterance.pitch = 0.94; // Confident, clear male AI tech lead tone
       targetVoice =
-        indianVoices.find((v) => v.name.toLowerCase().includes("ravi") || v.name.toLowerCase().includes("male")) ||
-        (indianVoices.length > 0 ? indianVoices[0] : null) ||
-        voices.find((v) => v.name.toLowerCase().includes("david") || v.name.toLowerCase().includes("male")) ||
-        voices[0];
+        voicePool.find((v) => {
+          const n = v.name.toLowerCase();
+          return (
+            n.includes("rishi") ||
+            n.includes("ravi") ||
+            n.includes("david") ||
+            n.includes("guy") ||
+            n.includes("male")
+          );
+        }) || voicePool[0];
     }
 
     if (targetVoice) {

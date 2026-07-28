@@ -147,10 +147,28 @@ export default function MirrorRoomPage() {
     if ("speechSynthesis" in window) {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(
-        "Welcome to the Interview AI Mirror Room. Your audio and video setup is perfectly configured."
+        "Welcome to the Interview AI Mirror Room. Your audio and video setup is perfectly configured and your AI interviewer voice is ready."
       );
-      utterance.rate = 1.0;
-      utterance.pitch = 1.0;
+      utterance.rate = 0.96;
+      utterance.pitch = selectedGender === "female" ? 1.03 : 0.95;
+
+      const voices = window.speechSynthesis.getVoices();
+      const naturalVoices = voices.filter((v) => {
+        const n = v.name.toLowerCase();
+        return (
+          n.includes("natural") ||
+          n.includes("neural") ||
+          n.includes("online") ||
+          n.includes("google") ||
+          n.includes("samantha") ||
+          n.includes("aria") ||
+          n.includes("guy")
+        );
+      });
+      const pool = naturalVoices.length > 0 ? naturalVoices : voices;
+      if (pool.length > 0) {
+        utterance.voice = pool[0];
+      }
 
       utterance.onend = () => {
         setTestingSpeaker(false);

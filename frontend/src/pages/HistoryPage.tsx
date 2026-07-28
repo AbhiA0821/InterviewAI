@@ -92,12 +92,14 @@ export default function HistoryPage() {
                   </h3>
                   <span
                     className={`rounded-full px-2.5 py-0.5 text-xs font-extrabold uppercase ${
-                      item.status === "completed"
+                      item.status === "completed" && (item.overall_score ?? 0) > 0
                         ? "bg-emerald-950/90 text-emerald-400 border border-emerald-500/40"
                         : "bg-amber-950/90 text-amber-400 border border-amber-500/40"
                     }`}
                   >
-                    {item.status}
+                    {item.status === "completed" && (item.overall_score ?? 0) > 0
+                      ? "completed"
+                      : "incomplete"}
                   </span>
                 </div>
 
@@ -117,8 +119,18 @@ export default function HistoryPage() {
 
               <div className="flex items-center gap-4 shrink-0">
                 {item.overall_score !== undefined && item.overall_score !== null && (
-                  <div className="flex items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-950/80 px-3 py-1.5 text-emerald-300 font-black text-sm shadow-sm">
-                    <Trophy className="h-4 w-4 text-emerald-400" />
+                  <div
+                    className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 font-black text-sm shadow-sm ${
+                      item.overall_score > 0
+                        ? "border-emerald-500/40 bg-emerald-950/80 text-emerald-300"
+                        : "border-amber-500/40 bg-amber-950/80 text-amber-300"
+                    }`}
+                  >
+                    <Trophy
+                      className={`h-4 w-4 ${
+                        item.overall_score > 0 ? "text-emerald-400" : "text-amber-400"
+                      }`}
+                    />
                     <span>{Math.round(item.overall_score)}/100</span>
                   </div>
                 )}

@@ -38,14 +38,13 @@ def start_interview(request: StartInterviewRequest, db: Session = Depends(get_db
             resume_summary = resume.raw_text[:4000]
             # Auto-detect domain if default role
             if not target_role or target_role in ("General Engineering", "Full Stack Software Engineer"):
-                target_role = ai_service.auto_detect_domain(resume.raw_text[:3000])
+                target_role = gemini_service.auto_detect_domain(resume.raw_text[:3000])
 
     mode_name = (request.interview_type or "technical").upper()
-    questions = ai_service.generate_interview_questions(
+    questions = gemini_service.generate_interview_questions(
         target_role=target_role,
         resume_summary=resume_summary,
         interview_type=request.interview_type or "technical",
-        experience_level=request.experience_level or "Fresher",
         num_questions=5,
     )
 
@@ -161,6 +160,20 @@ def finish_interview(interview_id: int, db: Session = Depends(get_db)):
     if not interview.completed_at:
         interview.completed_at = datetime.utcnow()
 
+    # Check candidate response presence
+    placeholders = {
+        "[no answer provided]", "n/a", "pass", "skip", "none", "?", "...",
+        "i don't know", "idk"
+    }
+    user_texts = [
+        t.get("text", "").strip()
+        for t in (interview.transcript or [])
+        if t.get("role") == "user"
+        and t.get("text", "").strip()
+        and t.get("text", "").strip().lower() not in placeholders
+    ]
+    has_valid_answers = len(user_texts) > 0 and len(" ".join(user_texts).split()) >= 5
+
     # Generate Feedback if not existing
     existing_fb = db.query(Feedback).filter(Feedback.interview_id == interview_id).first()
     if not existing_fb:
@@ -178,27 +191,27 @@ def finish_interview(interview_id: int, db: Session = Depends(get_db)):
             except (ValueError, TypeError):
                 return default
 
+        default_score = 0.0 if not has_valid_answers else 50.0
+
         feedback = Feedback(
             interview_id=interview.id,
-            overall_score=safe_float(eval_data.get("overall_score"), 78.0),
-            communication_score=safe_float(eval_data.get("communication_score"), 82.0),
-            technical_score=safe_float(eval_data.get("technical_score"), 76.0),
-            problem_solving_score=safe_float(eval_data.get("problem_solving_score"), 79.0),
-            confidence_score=safe_float(eval_data.get("confidence_score"), 84.0),
-            strengths=eval_data.get("strengths") or [
-                "Clear communication and articulate explanation of core concepts.",
-                f"Demonstrated good baseline knowledge for {interview.target_role}.",
-                "Maintained calm composure throughout the voice interview.",
-            ],
-            areas_for_improvement=eval_data.get("areas_for_improvement") or [
-                "Provide deeper technical specifics and architectural tradeoffs.",
-                "Elaborate on quantitative metrics and performance benchmarks.",
-                "Structure answers with clear problem-statement and solution framework.",
-            ],
+            overall_score=safe_float(eval_data.get("overall_score"), default_score),
+            communication_score=safe_float(eval_data.get("communication_score"), default_score),
+            technical_score=safe_float(eval_data.get("technical_score"), default_score),
+            problem_solving_score=safe_float(eval_data.get("problem_solving_score"), default_score),
+            confidence_score=safe_float(eval_data.get("confidence_score"), default_score),
+            strengths=eval_data.get("strengths") or (
+                ["Session initiated."] if not has_valid_answers else ["Attempted interview practice session."]
+            ),
+            areas_for_improvement=eval_data.get("areas_for_improvement") or (
+                ["Attempt interview questions and speak or type complete answers to receive an AI performance evaluation."]
+            ),
             detailed_report=eval_data.get("detailed_report") or {
-                "summary": f"Demonstrated solid performance during the {interview.target_role} interview practice.",
-                "key_takeaway": "Good baseline foundation with room for deeper technical drill-down.",
-                "recommendation": "Hire",
+                "summary": f"The candidate started the interview session for {interview.target_role} but left without providing valid answers."
+                if not has_valid_answers
+                else f"Practice session completed for {interview.target_role}.",
+                "key_takeaway": "Session left incomplete / abandoned." if not has_valid_answers else "Practice session completed.",
+                "recommendation": "Incomplete / Abandoned" if not has_valid_answers else "Needs Improvement",
             },
         )
         db.add(feedback)
@@ -206,6 +219,18 @@ def finish_interview(interview_id: int, db: Session = Depends(get_db)):
         db.refresh(feedback)
     else:
         feedback = existing_fb
+        if not has_valid_answers and feedback.overall_score > 0:
+            feedback.overall_score = 0.0
+            feedback.communication_score = 0.0
+            feedback.technical_score = 0.0
+            feedback.problem_solving_score = 0.0
+            feedback.confidence_score = 0.0
+            feedback.detailed_report = {
+                "summary": f"The candidate started the interview session for {interview.target_role} but left without providing valid answers.",
+                "key_takeaway": "Session left incomplete / abandoned.",
+                "recommendation": "Incomplete / Abandoned",
+            }
+            db.commit()
 
     return {
         "interview_id": interview.id,
@@ -215,22 +240,49 @@ def finish_interview(interview_id: int, db: Session = Depends(get_db)):
     }
 
 
-
 @router.get("/history")
 def list_interview_history(db: Session = Depends(get_db)):
     """List all past interviews."""
+    placeholders = {
+        "[no answer provided]", "n/a", "pass", "skip", "none", "?", "...",
+        "i don't know", "idk"
+    }
     interviews = db.query(Interview).order_by(Interview.started_at.desc()).all()
     results = []
     for item in interviews:
         fb = db.query(Feedback).filter(Feedback.interview_id == item.id).first()
+
+        user_texts = [
+            t.get("text", "").strip()
+            for t in (item.transcript or [])
+            if t.get("role") == "user"
+            and t.get("text", "").strip()
+            and t.get("text", "").strip().lower() not in placeholders
+        ]
+        has_valid_answers = len(user_texts) > 0 and len(" ".join(user_texts).split()) >= 5
+
+        # Sanitize feedback if zero valid answers but positive overall_score stored
+        if fb and not has_valid_answers and fb.overall_score > 0:
+            fb.overall_score = 0.0
+            fb.communication_score = 0.0
+            fb.technical_score = 0.0
+            fb.problem_solving_score = 0.0
+            fb.confidence_score = 0.0
+            fb.detailed_report = {
+                "summary": f"The candidate started the interview session for {item.target_role} but left without providing valid answers.",
+                "key_takeaway": "Session left incomplete / abandoned.",
+                "recommendation": "Incomplete / Abandoned",
+            }
+            db.commit()
+
         results.append(
             {
                 "id": item.id,
                 "target_role": item.target_role,
-                "status": item.status,
+                "status": "incomplete" if not has_valid_answers and item.status != "completed" else item.status,
                 "started_at": item.started_at.isoformat() if item.started_at else None,
                 "completed_at": item.completed_at.isoformat() if item.completed_at else None,
-                "overall_score": fb.overall_score if fb else None,
+                "overall_score": fb.overall_score if fb else (0.0 if not has_valid_answers else None),
             }
         )
     return results

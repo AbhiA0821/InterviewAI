@@ -31,10 +31,10 @@ def structure_resume_text(raw_text: str) -> Dict[str, Any]:
     lines = [line.strip() for line in raw_text.splitlines() if line.strip()]
     candidate_name = lines[0] if lines else "Candidate"
 
-    # Use Groq API via ai_service for deep resume intelligence
+    # Use Gemini API multi-key pool for deep resume intelligence
     try:
-        from app.services.ai_service import ai_service
-        ai_analysis = ai_service.analyze_resume(raw_text)
+        from app.services.gemini_service import gemini_service
+        ai_analysis = gemini_service.analyze_resume(raw_text)
     except Exception:
         ai_analysis = {}
 
