@@ -126,11 +126,11 @@ export const InterviewerAvatar: React.FC<InterviewerAvatarProps> = ({
         )}
 
         {/* Photorealistic AI Avatar Frame: Centered 1:1 Aspect Ratio (Stationary portrait picture) */}
-        <div className="relative h-full aspect-square max-w-full flex items-center justify-center mx-auto overflow-hidden">
+        <div className="relative h-full max-h-full aspect-square max-w-full flex items-center justify-center mx-auto overflow-hidden">
           <img
             src={avatarImage}
             alt={`${interviewerName} AI Interviewer`}
-            className="h-full w-full object-contain pointer-events-none select-none"
+            className="max-h-full max-w-full object-contain pointer-events-none select-none drop-shadow-[0_10px_25px_rgba(0,0,0,0.6)]"
           />
 
           {/* Micro Eye Blink Overlay */}

@@ -326,7 +326,7 @@ export default function MirrorRoomPage() {
                 </div>
               </div>
 
-              {/* Male Persona Card (Abhii) */}
+              {/* Male Persona Card (Abhi) */}
               <div
                 onClick={() => handleGenderSelect("male")}
                 className={`relative cursor-pointer rounded-2xl border p-4 transition-all flex flex-col items-center space-y-3 ${
@@ -341,12 +341,12 @@ export default function MirrorRoomPage() {
                 <div className="h-20 w-20 rounded-full overflow-hidden border-2 border-emerald-500/60 shadow-lg">
                   <img
                     src="/avatars/male.png"
-                    alt="Abhii AI Lead"
+                    alt="Abhi AI Lead"
                     className="h-full w-full object-cover object-[center_15%]"
                   />
                 </div>
                 <div className="text-center space-y-0.5">
-                  <div className="text-sm font-extrabold text-white">Abhii</div>
+                  <div className="text-sm font-extrabold text-white">Abhi</div>
                   <div className="text-[11px] text-emerald-400 font-semibold">AI Engineering Lead (Male)</div>
                 </div>
               </div>

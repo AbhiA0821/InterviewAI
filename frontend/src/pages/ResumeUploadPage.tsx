@@ -15,7 +15,7 @@ export default function ResumeUploadPage() {
   const [parsedResume, setParsedResume] = useState<ParsedResume | null>(null);
 
   const [experienceLevel, setExperienceLevel] = useState<"Fresher" | "Intermediate" | "Experienced">("Fresher");
-  const [interviewerGender, setInterviewerGender] = useState<"tanya" | "riya" | "abhii">("riya");
+  const [interviewerGender, setInterviewerGender] = useState<"tanya" | "riya" | "abhi">("riya");
   const [targetRole, setTargetRole] = useState(roleParam);
   const [duration, setDuration] = useState("5 mins");
   const typeParam = (searchParams.get("type") as "technical" | "hr" | "non_technical") || "technical";
@@ -111,7 +111,7 @@ export default function ResumeUploadPage() {
     setStarting(true);
     setError("");
     try {
-      const genderParam = interviewerGender === "abhii" ? "male" : "female";
+      const genderParam = interviewerGender === "abhi" ? "male" : "female";
       localStorage.setItem("selected_gender", genderParam);
       localStorage.setItem("selected_duration", duration);
       const res = await interviewService.startInterview(
@@ -274,18 +274,18 @@ export default function ResumeUploadPage() {
                   <span>Riya (Female)</span>
                 </button>
 
-                {/* Abhii Avatar Pill */}
+                {/* Abhi Avatar Pill */}
                 <button
                   type="button"
-                  onClick={() => setInterviewerGender("abhii")}
+                  onClick={() => setInterviewerGender("abhi")}
                   className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all ${
-                    interviewerGender === "abhii"
+                    interviewerGender === "abhi"
                       ? "border-2 border-emerald-500 bg-emerald-50 text-emerald-900 shadow-sm"
                       : "border border-slate-300 bg-white text-slate-700 hover:border-slate-400"
                   }`}
                 >
-                  <img src="/avatars/male.png" alt="Abhii" className="h-6 w-6 rounded-full object-cover" />
-                  <span>Abhii (Male)</span>
+                  <img src="/avatars/male.png" alt="Abhi" className="h-6 w-6 rounded-full object-cover" />
+                  <span>Abhi (Male)</span>
                 </button>
               </div>
             </div>
@@ -462,8 +462,8 @@ export default function ResumeUploadPage() {
               <div>
                 <label className="text-xs font-bold text-slate-600 block mb-1">Interviewer</label>
                 <div className="inline-flex items-center gap-2 rounded-full bg-emerald-500 text-white px-4 py-1.5 text-xs font-bold shadow-sm">
-                  <img src={interviewerGender === "abhii" ? "/avatars/male.png" : "/avatars/female.png"} alt="Interviewer" className="h-5 w-5 rounded-full object-cover" />
-                  <span>{interviewerGender === "abhii" ? "Abhii" : interviewerGender === "tanya" ? "Tanya" : "Riya"}</span>
+                  <img src={interviewerGender === "abhi" ? "/avatars/male.png" : "/avatars/female.png"} alt="Interviewer" className="h-5 w-5 rounded-full object-cover" />
+                  <span>{interviewerGender === "abhi" ? "Abhi" : interviewerGender === "tanya" ? "Tanya" : "Riya"}</span>
                 </div>
               </div>
             </div>

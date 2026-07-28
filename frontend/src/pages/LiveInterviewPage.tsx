@@ -427,28 +427,44 @@ export default function LiveInterviewPage() {
         </div>
       )}
 
-      {/* MOCKLINGO MAIN AI STAGE WITH FLOATING CANDIDATE PIP */}
-      <div className="relative flex-1 my-2 w-full rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 shadow-2xl flex flex-col justify-between min-h-0">
-        {/* Floating Top Translucent Active Question Banner */}
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 w-[90%] sm:w-[75%] max-w-2xl rounded-xl bg-black/85 border border-slate-700/80 p-2.5 sm:p-3 text-xs sm:text-sm font-bold text-white shadow-2xl backdrop-blur flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5 overflow-hidden">
-            <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-ping shrink-0" />
-            <p className="truncate text-slate-100">{activeQuestionText}</p>
+      {/* MOCKLINGO MAIN AI STAGE CONTAINER */}
+      <div className="relative flex-1 my-1.5 sm:my-2 w-full rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 shadow-2xl flex flex-col justify-between min-h-0">
+        {/* TOP DEDICATED QUESTION PANEL: Always fully visible & scrollable (never truncated or cut off) */}
+        <div className="shrink-0 w-full bg-slate-900/95 border-b border-slate-800 p-3 sm:p-3.5 backdrop-blur z-20 shadow-md space-y-1.5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-emerald-400 bg-emerald-950/90 px-2.5 py-0.5 rounded-full border border-emerald-500/40 shadow-sm flex items-center gap-1.5">
+                <Sparkles className="h-3 w-3 animate-pulse" />
+                <span>Question {(interview.current_question_index || 0) + 1} of {interview.questions?.length || 1}</span>
+              </span>
+              <span className="hidden sm:inline-block text-[10px] font-bold text-slate-400 bg-slate-800/80 px-2.5 py-0.5 rounded-full border border-slate-700">
+                AI Interviewer Question
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (activeQuestionText) speakText(activeQuestionText);
+              }}
+              className="shrink-0 flex items-center gap-1.5 text-xs font-extrabold text-emerald-400 bg-emerald-950/90 hover:bg-emerald-900 px-3 py-1 rounded-full border border-emerald-500/50 shadow-sm transition-all active:scale-95"
+              title="Replay interviewer voice reading the question"
+            >
+              <Volume2 className="h-3.5 w-3.5" />
+              <span>Replay Question</span>
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              if (activeQuestionText) speakText(activeQuestionText);
-            }}
-            className="shrink-0 flex items-center gap-1 text-xs font-extrabold text-emerald-400 bg-emerald-950/90 hover:bg-emerald-900 px-3 py-1 rounded-full border border-emerald-500/50 shadow-sm transition-all"
-          >
-            <Volume2 className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Replay</span>
-          </button>
+
+          {/* Full Active Question Text with Custom Scrollbar */}
+          <div className="max-h-24 sm:max-h-28 overflow-y-auto pr-2 custom-scrollbar">
+            <p className="text-slate-100 text-xs sm:text-sm md:text-base font-semibold leading-relaxed select-text">
+              {activeQuestionText}
+            </p>
+          </div>
         </div>
 
-        {/* Main Stage: Photorealistic AI Interviewer Avatar */}
-        <div className="relative flex-1 w-full h-full min-h-0">
+        {/* CENTER STAGE: Photorealistic AI Interviewer Avatar & Floating Candidate PiP */}
+        <div className="relative flex-1 w-full min-h-0 bg-slate-950 flex items-center justify-center p-1 sm:p-2 overflow-hidden">
           <InterviewerAvatar
             gender={interviewerGender}
             onGenderChange={(g) => {
@@ -460,43 +476,49 @@ export default function LiveInterviewPage() {
             interviewerName={interviewerName}
             speakingBoundaryTick={speakingBoundaryTick}
           />
-        </div>
 
-        {/* Floating Candidate Picture-in-Picture (PiP) Webcam Box */}
-        <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20 h-28 w-40 sm:h-36 sm:w-52 rounded-xl overflow-hidden border-2 border-slate-700/90 bg-slate-950 shadow-xl transition-all group hover:scale-105 hover:border-emerald-400">
-          {cameraActive ? (
-            <video
-              ref={userVideoRef}
-              autoPlay
-              playsInline
-              muted
-              className="h-full w-full object-cover transform -scale-x-100"
-            />
-          ) : (
-            <div className="h-full w-full flex flex-col items-center justify-center bg-slate-950 text-slate-500 space-y-1">
-              <CameraOff className="h-7 w-7 text-red-400" />
-              <span className="text-[10px] font-bold">Camera OFF</span>
-            </div>
-          )}
-
-          {/* Floating Candidate Name & Mic Badge */}
-          <div className="absolute bottom-1.5 left-1.5 right-1.5 flex items-center justify-between text-[10px] font-extrabold text-white bg-black/80 px-2 py-0.5 rounded-full border border-slate-800 backdrop-blur">
-            <span className="truncate">You (Candidate)</span>
-            {micActive ? (
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+          {/* Floating Candidate Picture-in-Picture (PiP) Webcam Box */}
+          <div className="absolute top-2 right-2 sm:top-3 sm:right-3 z-30 h-24 w-36 sm:h-32 sm:w-48 rounded-xl overflow-hidden border-2 border-slate-700/90 bg-slate-950 shadow-2xl transition-all group hover:border-emerald-400">
+            {cameraActive ? (
+              <video
+                ref={userVideoRef}
+                autoPlay
+                playsInline
+                muted
+                className="h-full w-full object-cover transform -scale-x-100"
+              />
             ) : (
-              <MicOff className="h-3 w-3 text-red-400" />
+              <div className="h-full w-full flex flex-col items-center justify-center bg-slate-950 text-slate-500 space-y-1">
+                <CameraOff className="h-6 w-6 text-red-400" />
+                <span className="text-[10px] font-bold">Camera OFF</span>
+              </div>
             )}
+
+            {/* Floating Candidate Name & Mic Badge */}
+            <div className="absolute bottom-1.5 left-1.5 right-1.5 flex items-center justify-between text-[10px] font-extrabold text-white bg-black/80 px-2 py-0.5 rounded-full border border-slate-800 backdrop-blur">
+              <span className="truncate">You (Candidate)</span>
+              {micActive ? (
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+              ) : (
+                <MicOff className="h-3 w-3 text-red-400" />
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Live Answer Voice Transcript Input Overlay Box */}
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 w-[90%] sm:w-[75%] max-w-2xl rounded-xl bg-black/90 border border-slate-800 p-2 sm:p-2.5 shadow-2xl backdrop-blur space-y-1.5">
+        {/* BOTTOM DEDICATED LIVE ANSWER / VOICE TRANSCRIPTION BOX */}
+        <div className="shrink-0 w-full bg-slate-900/95 border-t border-slate-800 p-2.5 sm:p-3 backdrop-blur z-20 shadow-lg space-y-1.5">
           <div className="flex items-center justify-between text-[10px] sm:text-[11px] font-extrabold text-slate-400">
             <span className="flex items-center gap-1.5 text-emerald-400">
               <Sparkles className="h-3.5 w-3.5" /> Live Voice Transcription
             </span>
-            <span>{isRecording ? "🎤 Voice Recording..." : "Ready to speak"}</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+              isRecording
+                ? "bg-emerald-950/80 border-emerald-500/50 text-emerald-400 animate-pulse"
+                : "bg-slate-800 border-slate-700 text-slate-400"
+            }`}>
+              {isRecording ? "🎤 Voice Recording Active..." : "Ready to speak / type"}
+            </span>
           </div>
 
           <textarea
@@ -504,7 +526,7 @@ export default function LiveInterviewPage() {
             value={voiceTranscript}
             onChange={(e) => setVoiceTranscript(e.target.value)}
             placeholder="Speak aloud or type your response here... (Voice auto-transcribes live)"
-            className="w-full rounded-lg border border-slate-800 bg-slate-900/90 p-2 text-xs sm:text-sm text-white focus:outline-none focus:ring-1 focus:ring-emerald-400 resize-none font-medium"
+            className="w-full rounded-lg border border-slate-800 bg-slate-950 p-2 text-xs sm:text-sm text-white focus:outline-none focus:ring-1 focus:ring-emerald-400 resize-none font-medium placeholder:text-slate-500 custom-scrollbar"
           />
         </div>
       </div>
