@@ -1,0 +1,18 @@
+# -----------------------------------------------------------------------
+# render.yaml - Render Cloud Infrastructure as Code (Blueprint)
+# Deploy InterviewAI automatically on Render with 1-click.
+# -----------------------------------------------------------------------
+services:
+  - type: web
+    name: interviewai
+    env: docker
+    dockerfilePath: Dockerfile
+    plan: free
+    region: singapore # or oregon, frankfurt, ohio
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "False"
+      - key: GEMINI_API_KEYS
+        sync: false # Prompts user to enter their 10 Gemini API keys in Render Dashboard
