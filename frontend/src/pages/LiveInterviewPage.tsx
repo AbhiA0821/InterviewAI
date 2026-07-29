@@ -126,7 +126,9 @@ export default function LiveInterviewPage() {
           setCurrentKeyIndex(data.current_key_index || 1);
         } else if (data.type === "ai_thinking") {
           setAvatarStatus("thinking");
+          setSubmitting(true);
         } else if (data.type === "ai_response") {
+          setSubmitting(false);
           if (data.active_key_pool_count) setActiveKeyPoolCount(data.active_key_pool_count);
           if (data.current_key_index) setCurrentKeyIndex(data.current_key_index);
 
@@ -143,12 +145,20 @@ export default function LiveInterviewPage() {
             };
           });
 
-          speakText(data.text);
+          if (data.text) {
+            speakText(data.text);
+          }
         } else if (data.type === "interview_completed") {
-          handleFinishInterview();
+          setSubmitting(false);
+          setAvatarStatus("idle");
+          speakText("Thank you for completing your interview session! I am now generating your comprehensive evaluation report.");
+          setTimeout(() => {
+            navigate(`/feedback/${id}`);
+          }, 3000);
         }
       } catch (e) {
         console.warn("[WS] Failed to parse message:", e);
+        setSubmitting(false);
       }
     };
 
@@ -424,7 +434,6 @@ export default function LiveInterviewPage() {
         return;
       } catch (e) {
         console.warn("[WS] Fallback to REST HTTP post:", e);
-      } finally {
         setSubmitting(false);
       }
     }
