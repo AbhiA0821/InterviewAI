@@ -117,7 +117,16 @@ def answer_question(
     is_finished = next_index >= total_questions
 
     if not is_finished:
-        resume_text = interview.resume.raw_text if interview.resume and interview.resume.raw_text else ""
+        resume_text = ""
+        if interview.resume_id:
+            res_obj = db.query(Resume).filter(Resume.id == interview.resume_id).first()
+            if res_obj and res_obj.raw_text:
+                resume_text = res_obj.raw_text
+        if not resume_text:
+            last_res = db.query(Resume).order_by(Resume.id.desc()).first()
+            if last_res and last_res.raw_text:
+                resume_text = last_res.raw_text
+
         try:
             followup_q = gemini_service.generate_followup_question(
                 target_role=interview.target_role or "Software Engineer",
