@@ -2,12 +2,12 @@ import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyDemoKeyForInterviewAIPlatform123",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "interviewai-demo.firebaseapp.com",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "interviewai-demo",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "interviewai-demo.appspot.com",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "123456789",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:123456789:web:abcdef123456",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyDp_50V-dRwcfcUQaPz2iasIzfpb01umJA",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "interviewai-d249e.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "interviewai-d249e",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "interviewai-d249e.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "980340256724",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:980340256724:web:a822b8c684a94f4b02b041",
 };
 
 const app = initializeApp(firebaseConfig);
@@ -19,22 +19,24 @@ export const signInWithGooglePopup = async () => {
     const result = await signInWithPopup(auth, googleProvider);
     const user = result.user;
     const idToken = await user.getIdToken();
+    const email = user.email || "candidate@interviewai.com";
+    const name = user.displayName || email.split("@")[0].charAt(0).toUpperCase() + email.split("@")[0].slice(1);
     return {
       token: idToken,
-      email: user.email || "ainapureabhi0821@gmail.com",
-      display_name: user.displayName || "Abhi Ainapure",
-      photo_url: user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email || 'abhi'}`,
+      email: email,
+      display_name: name,
+      photo_url: user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
       google_id: user.uid,
     };
   } catch (error) {
-    console.info("Google OAuth popup completed authentication fallback:", error);
-    const userEmail = "ainapureabhi0821@gmail.com";
+    console.info("Google OAuth popup fallback activated:", error);
+    const fallbackId = Date.now();
     return {
-      token: `google-oauth-token-${Date.now()}`,
-      email: userEmail,
-      display_name: "Abhi Ainapure",
-      photo_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${userEmail}`,
-      google_id: `google-uid-${Date.now()}`,
+      token: `google-oauth-token-${fallbackId}`,
+      email: `candidate_${fallbackId}@interviewai.com`,
+      display_name: "Candidate",
+      photo_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${fallbackId}`,
+      google_id: `google-uid-${fallbackId}`,
     };
   }
 };

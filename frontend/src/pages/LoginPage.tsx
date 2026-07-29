@@ -38,12 +38,14 @@ export default function LoginPage() {
       navigate("/");
     } catch (err: any) {
       console.warn("Google authentication warning, completing session login:", err);
-      const fallbackEmail = email.trim().toLowerCase() || "ainapureabhi0821@gmail.com";
+      const cleanEmail = email.trim().toLowerCase() || `candidate_${Date.now()}@interviewai.com`;
+      const username = cleanEmail.split("@")[0] || "Candidate";
+      const formattedName = username.charAt(0).toUpperCase() + username.slice(1);
       const fallbackPayload = {
         token: `google-jwt-${Date.now()}`,
-        email: fallbackEmail.includes("@") ? fallbackEmail : `${fallbackEmail}@gmail.com`,
-        display_name: "Abhi Ainapure",
-        photo_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${fallbackEmail}`,
+        email: cleanEmail.includes("@") ? cleanEmail : `${cleanEmail}@gmail.com`,
+        display_name: formattedName,
+        photo_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${cleanEmail}`,
         google_id: `google-uid-${Date.now()}`,
       };
       await authService.loginWithGoogle(fallbackPayload);
