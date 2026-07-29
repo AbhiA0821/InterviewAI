@@ -21,7 +21,6 @@ import {
   Minimize,
   AlertTriangle,
   Video,
-  ShieldCheck,
   LayoutGrid,
 } from "lucide-react";
 
@@ -677,11 +676,102 @@ export default function LiveInterviewPage() {
           </div>
         </div>
 
-        {/* CENTER STAGE: 50/50 Split View (Half Avatar, Half Candidate Camera) or Focus PiP View */}
-        {viewMode === "split" ? (
-          <div className="relative flex-1 w-full min-h-0 bg-slate-950 p-2 sm:p-3 overflow-hidden grid grid-cols-1 md:grid-cols-2 gap-3 items-stretch">
-            {/* LEFT HALF (50%): AI Interviewer Avatar Container */}
-            <div className="h-full w-full min-h-0 relative rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 shadow-xl flex flex-col">
+        {/* CENTER STAGE: 50/50 Split View on Desktop or Sleek Compact PiP on Mobile */}
+        <div className="relative flex-1 w-full min-h-0 bg-slate-950 p-1.5 sm:p-3 overflow-hidden">
+          {viewMode === "split" ? (
+            <div className="h-full w-full grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-3 items-stretch">
+              {/* LEFT: AI Interviewer Avatar Container */}
+              <div className="h-full w-full min-h-0 relative rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 shadow-xl flex flex-col">
+                <InterviewerAvatar
+                  gender={interviewerGender}
+                  onGenderChange={(g) => {
+                    setInterviewerGender(g);
+                    localStorage.setItem("selected_gender", g);
+                    window.speechSynthesis?.cancel();
+                  }}
+                  status={avatarStatus}
+                  interviewerName={interviewerName}
+                  speakingBoundaryTick={speakingBoundaryTick}
+                />
+              </div>
+
+              {/* RIGHT: Candidate Live Camera Feed (Hidden on small mobile split to prevent height overflow, renders as overlay on mobile) */}
+              <div className="hidden md:flex h-full w-full min-h-0 relative rounded-2xl overflow-hidden border-2 border-slate-800/90 bg-slate-950 shadow-2xl flex-col justify-between p-2.5 sm:p-3 transition-all group hover:border-emerald-500/50">
+                <div className="flex items-center justify-between z-10 shrink-0 mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="flex items-center gap-2 text-xs font-bold text-white bg-slate-900/90 px-3 py-1.5 rounded-full border border-slate-800 shadow-md backdrop-blur">
+                      <span className={`h-2.5 w-2.5 rounded-full ${cameraActive ? "bg-emerald-400 animate-pulse" : "bg-red-500"}`} />
+                      <span>You (Candidate)</span>
+                    </span>
+                    <span className="flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-emerald-400 bg-emerald-950/80 px-2.5 py-1 rounded-full border border-emerald-500/40 shadow-sm">
+                      <Video className="h-3 w-3" />
+                      <span>Live HD WebCam</span>
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 bg-slate-900/90 px-3 py-1 rounded-full border border-slate-800 text-xs font-bold backdrop-blur">
+                    {micActive ? (
+                      <>
+                        <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                        <span className="text-emerald-400 font-extrabold text-[11px]">Mic Active</span>
+                      </>
+                    ) : (
+                      <>
+                        <MicOff className="h-3.5 w-3.5 text-red-400" />
+                        <span className="text-red-400 font-extrabold text-[11px]">Muted</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <div className="relative flex-1 w-full rounded-xl overflow-hidden bg-slate-950 flex items-center justify-center border border-slate-800 shadow-inner group min-h-0">
+                  {cameraActive ? (
+                    <video
+                      ref={userVideoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="h-full w-full object-cover transform -scale-x-100"
+                    />
+                  ) : (
+                    <div className="h-full w-full flex flex-col items-center justify-center bg-slate-950 text-slate-500 space-y-2">
+                      <CameraOff className="h-10 w-10 text-red-400/80 animate-pulse" />
+                      <span className="text-xs font-extrabold text-slate-400">Camera Feed Paused</span>
+                      <p className="text-[10px] text-slate-500">Click camera button in dock to enable</p>
+                    </div>
+                  )}
+
+                  <div className="absolute bottom-3 left-3 z-20 flex items-center gap-2 rounded-full bg-slate-950/90 border border-slate-800 px-3 py-1 text-white shadow-xl text-xs font-bold backdrop-blur">
+                    <Sparkles className="h-3.5 w-3.5 text-emerald-400 animate-pulse" />
+                    <span className="text-[11px]">AI Proctoring Active</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Mobile Candidate PiP Window Overlay (Always visible on mobile screens) */}
+              <div className="md:hidden absolute top-2 right-2 z-30 h-20 w-28 rounded-xl overflow-hidden border-2 border-slate-700/90 bg-slate-950 shadow-2xl transition-all">
+                {cameraActive ? (
+                  <video
+                    ref={userVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="h-full w-full object-cover transform -scale-x-100"
+                  />
+                ) : (
+                  <div className="h-full w-full flex flex-col items-center justify-center bg-slate-950 text-slate-500">
+                    <CameraOff className="h-5 w-5 text-red-400" />
+                    <span className="text-[9px] font-bold">Cam OFF</span>
+                  </div>
+                )}
+                <div className="absolute bottom-1 left-1 right-1 flex items-center justify-between text-[9px] font-extrabold text-white bg-black/80 px-1.5 py-0.5 rounded-full border border-slate-800 backdrop-blur">
+                  <span className="truncate">You</span>
+                  {micActive ? <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" /> : <MicOff className="h-2.5 w-2.5 text-red-400" />}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="relative flex-1 h-full w-full min-h-0 bg-slate-950 flex items-center justify-center p-1 sm:p-2 overflow-hidden">
               <InterviewerAvatar
                 gender={interviewerGender}
                 onGenderChange={(g) => {
@@ -693,41 +783,8 @@ export default function LiveInterviewPage() {
                 interviewerName={interviewerName}
                 speakingBoundaryTick={speakingBoundaryTick}
               />
-            </div>
 
-            {/* RIGHT HALF (50%): Candidate Live Camera Video Feed Window */}
-            <div className="h-full w-full min-h-0 relative rounded-2xl overflow-hidden border-2 border-slate-800/90 bg-slate-950 shadow-2xl flex flex-col justify-between p-2.5 sm:p-3 transition-all group hover:border-emerald-500/50">
-              {/* Candidate Top Info Bar */}
-              <div className="flex items-center justify-between z-10 shrink-0 mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="flex items-center gap-2 text-xs font-bold text-white bg-slate-900/90 px-3 py-1.5 rounded-full border border-slate-800 shadow-md backdrop-blur">
-                    <span className={`h-2.5 w-2.5 rounded-full ${cameraActive ? "bg-emerald-400 animate-pulse" : "bg-red-500"}`} />
-                    <span>You (Candidate)</span>
-                  </span>
-                  <span className="hidden sm:flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-emerald-400 bg-emerald-950/80 px-2.5 py-1 rounded-full border border-emerald-500/40 shadow-sm">
-                    <Video className="h-3 w-3" />
-                    <span>Live HD WebCam</span>
-                  </span>
-                </div>
-
-                {/* Mic Status Badge */}
-                <div className="flex items-center gap-1.5 bg-slate-900/90 px-3 py-1 rounded-full border border-slate-800 text-xs font-bold backdrop-blur">
-                  {micActive ? (
-                    <>
-                      <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                      <span className="text-emerald-400 font-extrabold text-[11px]">Mic Active</span>
-                    </>
-                  ) : (
-                    <>
-                      <MicOff className="h-3.5 w-3.5 text-red-400" />
-                      <span className="text-red-400 font-extrabold text-[11px]">Muted</span>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Video Stream Element */}
-              <div className="relative flex-1 w-full rounded-xl overflow-hidden bg-slate-950 flex items-center justify-center border border-slate-800 shadow-inner group min-h-0">
+              <div className="absolute top-2 right-2 sm:top-3 sm:right-3 z-30 h-20 w-28 sm:h-32 sm:w-48 rounded-xl overflow-hidden border-2 border-slate-700/90 bg-slate-950 shadow-2xl transition-all">
                 {cameraActive ? (
                   <video
                     ref={userVideoRef}
@@ -737,79 +794,32 @@ export default function LiveInterviewPage() {
                     className="h-full w-full object-cover transform -scale-x-100"
                   />
                 ) : (
-                  <div className="h-full w-full flex flex-col items-center justify-center bg-slate-950 text-slate-500 space-y-2">
-                    <CameraOff className="h-10 w-10 text-red-400/80 animate-pulse" />
-                    <span className="text-xs font-extrabold text-slate-400">Camera Feed Paused</span>
-                    <p className="text-[10px] text-slate-500">Click camera button in dock to enable</p>
+                  <div className="h-full w-full flex flex-col items-center justify-center bg-slate-950 text-slate-500 space-y-1">
+                    <CameraOff className="h-5 w-5 sm:h-6 sm:w-6 text-red-400" />
+                    <span className="text-[9px] sm:text-[10px] font-bold">Camera OFF</span>
                   </div>
                 )}
 
-                {/* Subtle Glow Overlay */}
-                <div className="absolute inset-0 border border-emerald-500/10 pointer-events-none rounded-xl" />
-
-                {/* Bottom Video Stream Status Pills */}
-                <div className="absolute bottom-3 left-3 z-20 flex items-center gap-2 rounded-full bg-slate-950/90 border border-slate-800 px-3 py-1 text-white shadow-xl text-xs font-bold backdrop-blur">
-                  <Sparkles className="h-3.5 w-3.5 text-emerald-400 animate-pulse" />
-                  <span className="text-[11px]">AI Proctoring Active</span>
-                </div>
-
-                <div className="absolute bottom-3 right-3 z-20 hidden sm:flex items-center gap-1.5 bg-black/70 px-3 py-1 rounded-full border border-slate-800 backdrop-blur text-[10px] font-bold text-slate-300">
-                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
-                  <span>1080p HD Video</span>
+                <div className="absolute bottom-1 left-1 right-1 sm:bottom-1.5 sm:left-1.5 sm:right-1.5 flex items-center justify-between text-[9px] sm:text-[10px] font-extrabold text-white bg-black/80 px-1.5 sm:px-2 py-0.5 rounded-full border border-slate-800 backdrop-blur">
+                  <span className="truncate">You (Candidate)</span>
+                  {micActive ? (
+                    <span className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-emerald-400 animate-pulse" />
+                  ) : (
+                    <MicOff className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-red-400" />
+                  )}
                 </div>
               </div>
             </div>
-          </div>
-        ) : (
-          <div className="relative flex-1 w-full min-h-0 bg-slate-950 flex items-center justify-center p-1 sm:p-2 overflow-hidden">
-            <InterviewerAvatar
-              gender={interviewerGender}
-              onGenderChange={(g) => {
-                setInterviewerGender(g);
-                localStorage.setItem("selected_gender", g);
-                window.speechSynthesis?.cancel();
-              }}
-              status={avatarStatus}
-              interviewerName={interviewerName}
-              speakingBoundaryTick={speakingBoundaryTick}
-            />
-
-            {/* Floating Candidate Picture-in-Picture (PiP) Webcam Box */}
-            <div className="absolute top-2 right-2 sm:top-3 sm:right-3 z-30 h-24 w-36 sm:h-32 sm:w-48 rounded-xl overflow-hidden border-2 border-slate-700/90 bg-slate-950 shadow-2xl transition-all group hover:border-emerald-400">
-              {cameraActive ? (
-                <video
-                  ref={userVideoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="h-full w-full object-cover transform -scale-x-100"
-                />
-              ) : (
-                <div className="h-full w-full flex flex-col items-center justify-center bg-slate-950 text-slate-500 space-y-1">
-                  <CameraOff className="h-6 w-6 text-red-400" />
-                  <span className="text-[10px] font-bold">Camera OFF</span>
-                </div>
-              )}
-
-              <div className="absolute bottom-1.5 left-1.5 right-1.5 flex items-center justify-between text-[10px] font-extrabold text-white bg-black/80 px-2 py-0.5 rounded-full border border-slate-800 backdrop-blur">
-                <span className="truncate">You (Candidate)</span>
-                {micActive ? (
-                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                ) : (
-                  <MicOff className="h-3 w-3 text-red-400" />
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* BOTTOM DEDICATED LIVE ANSWER / VOICE TRANSCRIPTION BOX */}
-        <div className="shrink-0 w-full bg-slate-900/95 border-t border-slate-800 p-2.5 sm:p-3 backdrop-blur z-20 shadow-lg space-y-1.5">
+        <div className="shrink-0 w-full bg-slate-900/95 border-t border-slate-800 p-2 sm:p-3 backdrop-blur z-20 shadow-lg space-y-1">
           <div className="flex items-center justify-between text-[10px] sm:text-[11px] font-extrabold text-slate-400">
             <span className="flex items-center gap-1.5 text-emerald-400">
-              <Sparkles className="h-3.5 w-3.5" /> Live Voice Transcription
+              <Sparkles className="h-3.5 w-3.5" /> Live Voice / Text Answer
             </span>
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+            <span className={`px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold border ${
               isRecording
                 ? "bg-emerald-950/80 border-emerald-500/50 text-emerald-400 animate-pulse"
                 : "bg-slate-800 border-slate-700 text-slate-400"
@@ -818,21 +828,32 @@ export default function LiveInterviewPage() {
             </span>
           </div>
 
-          <textarea
-            rows={2}
-            value={voiceTranscript}
-            onChange={(e) => setVoiceTranscript(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                if (voiceTranscript.trim() && !submitting) {
-                  handleSendVoiceAnswer();
+          <div className="relative flex items-center">
+            <textarea
+              rows={2}
+              value={voiceTranscript}
+              onChange={(e) => setVoiceTranscript(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  if (voiceTranscript.trim() && !submitting) {
+                    handleSendVoiceAnswer();
+                  }
                 }
-              }
-            }}
-            placeholder="Speak aloud or type your response here... Press Enter to submit. (Voice auto-transcribes live)"
-            className="w-full rounded-lg border border-slate-800 bg-slate-950 p-2 text-xs sm:text-sm text-white focus:outline-none focus:ring-1 focus:ring-emerald-400 resize-none font-medium placeholder:text-slate-500 custom-scrollbar"
-          />
+              }}
+              placeholder="Type or speak your answer... Press Enter or tap Submit (Voice auto-transcribes live)"
+              className="w-full rounded-xl border border-slate-800 bg-slate-950 p-2 sm:p-2.5 pr-14 text-xs sm:text-sm text-white focus:outline-none focus:ring-1 focus:ring-emerald-400 resize-none font-medium placeholder:text-slate-500 custom-scrollbar shadow-inner"
+            />
+            <button
+              type="button"
+              onClick={handleSendVoiceAnswer}
+              disabled={!voiceTranscript.trim() || submitting}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-extrabold disabled:opacity-40 shadow-md transition-all active:scale-95 flex items-center justify-center"
+              title="Submit Answer Immediately"
+            >
+              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            </button>
+          </div>
         </div>
       </div>
 

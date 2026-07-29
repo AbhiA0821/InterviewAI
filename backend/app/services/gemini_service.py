@@ -80,19 +80,27 @@ class GeminiService:
                     continue
 
             try:
-                logger.info(
-                    f"[GeminiService] Using Gemini API Key [{key_index + 1}/{num_keys}] ({key_snippet}) for generation."
-                )
-                response = client.models.generate_content(
-                    model=self.model_name,
-                    contents=prompt,
-                )
-                if response and hasattr(response, "text") and response.text:
-                    # Update current_key_index for round-robin balancing across future requests
-                    self.current_key_index = (key_index + 1) % num_keys
-                    return response.text.strip()
-                else:
-                    logger.warning(f"[GeminiService] Key {key_snippet} returned empty response. Trying next key...")
+                models_to_try = ["gemini-2.0-flash", "gemini-2.5-flash", "gemini-flash-latest", "gemini-2.0-flash-lite"]
+                unique_models = []
+                for m in models_to_try:
+                    if m and m not in unique_models:
+                        unique_models.append(m)
+
+                for target_model in unique_models:
+                    try:
+                        logger.info(
+                            f"[GeminiService] Using Gemini API Key [{key_index + 1}/{num_keys}] ({key_snippet}) with model '{target_model}'."
+                        )
+                        response = client.models.generate_content(
+                            model=target_model,
+                            contents=prompt,
+                        )
+                        if response and hasattr(response, "text") and response.text:
+                            self.current_key_index = (key_index + 1) % num_keys
+                            return response.text.strip()
+                    except Exception as model_err:
+                        logger.warning(f"[GeminiService] Key {key_snippet} with model '{target_model}' error: {model_err}")
+                        continue
             except Exception as e:
                 logger.warning(
                     f"[GeminiService] API key [{key_index + 1}/{num_keys}] ({key_snippet}) failed or hit rate limit ({e}). Auto-rotating to next key..."

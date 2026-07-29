@@ -11,6 +11,10 @@ interface HistoryItem {
   started_at?: string;
   completed_at?: string;
   overall_score?: number;
+  technical_score?: number;
+  communication_score?: number;
+  problem_solving_score?: number;
+  confidence_score?: number;
 }
 
 export default function HistoryPage() {
@@ -47,8 +51,8 @@ export default function HistoryPage() {
     <div className="max-w-4xl mx-auto space-y-8 pb-12">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">Interview History</h1>
-          <p className="text-sm text-slate-400 mt-1">Review your past practice sessions and scorecards</p>
+          <h1 className="text-3xl font-extrabold text-white tracking-tight">Interview History & Analytics</h1>
+          <p className="text-sm text-slate-400 mt-1">Review your past practice sessions, multi-metric scores, and scorecards</p>
         </div>
 
         <button
@@ -67,7 +71,7 @@ export default function HistoryPage() {
           </div>
           <h2 className="text-xl font-extrabold text-white">No Interview Practice Yet</h2>
           <p className="text-sm text-slate-400 max-w-md mx-auto leading-relaxed">
-            Start your first AI interview practice session to build confidence and receive structured feedback.
+            Start your first AI interview practice session to build confidence and receive structured scorecards.
           </p>
           <button
             onClick={() => navigate("/upload")}
@@ -83,59 +87,87 @@ export default function HistoryPage() {
             <div
               key={item.id}
               onClick={() => navigate(`/feedback/${item.id}`)}
-              className="group cursor-pointer rounded-2xl border border-slate-800 bg-slate-900/90 p-5 transition-all duration-200 hover:border-emerald-500/50 hover:shadow-xl flex items-center justify-between gap-4"
+              className="group cursor-pointer rounded-2xl border border-slate-800 bg-slate-900/90 p-5 transition-all duration-200 hover:border-emerald-500/50 hover:shadow-xl space-y-3"
             >
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-extrabold text-lg text-white group-hover:text-emerald-400 transition-colors">
-                    {item.target_role}
-                  </h3>
-                  <span
-                    className={`rounded-full px-2.5 py-0.5 text-xs font-extrabold uppercase ${
-                      item.status === "completed" && (item.overall_score ?? 0) > 0
-                        ? "bg-emerald-950/90 text-emerald-400 border border-emerald-500/40"
-                        : "bg-amber-950/90 text-amber-400 border border-amber-500/40"
-                    }`}
-                  >
-                    {item.status === "completed" && (item.overall_score ?? 0) > 0
-                      ? "completed"
-                      : "incomplete"}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2 text-xs text-slate-400 font-medium">
-                  <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                  <span>
-                    {item.started_at
-                      ? new Date(item.started_at).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })
-                      : "Recent"}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-4 shrink-0">
-                {item.overall_score !== undefined && item.overall_score !== null && (
-                  <div
-                    className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 font-black text-sm shadow-sm ${
-                      item.overall_score > 0
-                        ? "border-emerald-500/40 bg-emerald-950/80 text-emerald-300"
-                        : "border-amber-500/40 bg-amber-950/80 text-amber-300"
-                    }`}
-                  >
-                    <Trophy
-                      className={`h-4 w-4 ${
-                        item.overall_score > 0 ? "text-emerald-400" : "text-amber-400"
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-extrabold text-lg text-white group-hover:text-emerald-400 transition-colors">
+                      {item.target_role}
+                    </h3>
+                    <span
+                      className={`rounded-full px-2.5 py-0.5 text-xs font-extrabold uppercase ${
+                        item.status === "completed" && (item.overall_score ?? 0) > 0
+                          ? "bg-emerald-950/90 text-emerald-400 border border-emerald-500/40"
+                          : "bg-amber-950/90 text-amber-400 border border-amber-500/40"
                       }`}
-                    />
-                    <span>{Math.round(item.overall_score)}/100</span>
+                    >
+                      {item.status === "completed" && (item.overall_score ?? 0) > 0
+                        ? "completed"
+                        : "incomplete"}
+                    </span>
                   </div>
-                )}
-                <ArrowRight className="h-5 w-5 text-slate-400 group-hover:text-emerald-400 group-hover:translate-x-1 transition-all" />
+
+                  <div className="flex items-center gap-2 text-xs text-slate-400 font-medium">
+                    <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                    <span>
+                      {item.started_at
+                        ? new Date(item.started_at).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })
+                        : "Recent"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 shrink-0">
+                  {item.overall_score !== undefined && item.overall_score !== null && (
+                    <div
+                      className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 font-black text-sm shadow-sm ${
+                        item.overall_score > 0
+                          ? "border-emerald-500/40 bg-emerald-950/80 text-emerald-300"
+                          : "border-amber-500/40 bg-amber-950/80 text-amber-300"
+                      }`}
+                    >
+                      <Trophy
+                        className={`h-4 w-4 ${
+                          item.overall_score > 0 ? "text-emerald-400" : "text-amber-400"
+                        }`}
+                      />
+                      <span>Overall: {Math.round(item.overall_score)}/100</span>
+                    </div>
+                  )}
+                  <ArrowRight className="h-5 w-5 text-slate-400 group-hover:text-emerald-400 group-hover:translate-x-1 transition-all" />
+                </div>
               </div>
+
+              {/* Scorecard Metric Pills for completed interviews */}
+              {(item.technical_score !== undefined || item.communication_score !== undefined) && (
+                <div className="pt-2 border-t border-slate-800/80 flex flex-wrap gap-2 text-[11px] font-extrabold">
+                  {item.technical_score !== undefined && item.technical_score !== null && (
+                    <span className="bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 text-teal-300">
+                      💻 Tech Depth: {Math.round(item.technical_score)}%
+                    </span>
+                  )}
+                  {item.communication_score !== undefined && item.communication_score !== null && (
+                    <span className="bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 text-emerald-300">
+                      🗣️ STAR Comm: {Math.round(item.communication_score)}%
+                    </span>
+                  )}
+                  {item.problem_solving_score !== undefined && item.problem_solving_score !== null && (
+                    <span className="bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 text-cyan-300">
+                      🧠 Logic & Trade-offs: {Math.round(item.problem_solving_score)}%
+                    </span>
+                  )}
+                  {item.confidence_score !== undefined && item.confidence_score !== null && (
+                    <span className="bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 text-indigo-300">
+                      ⚡ Composure: {Math.round(item.confidence_score)}%
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>

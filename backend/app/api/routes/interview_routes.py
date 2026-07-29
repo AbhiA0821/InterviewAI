@@ -329,6 +329,10 @@ def list_interview_history(db: Session = Depends(get_db)):
                 "started_at": item.started_at.isoformat() if item.started_at else None,
                 "completed_at": item.completed_at.isoformat() if item.completed_at else None,
                 "overall_score": fb.overall_score if fb else (0.0 if not has_valid_answers else None),
+                "technical_score": fb.technical_score if fb else None,
+                "communication_score": fb.communication_score if fb else None,
+                "problem_solving_score": fb.problem_solving_score if fb else None,
+                "confidence_score": fb.confidence_score if fb else None,
             }
         )
     return results
