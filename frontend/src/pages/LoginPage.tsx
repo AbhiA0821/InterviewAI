@@ -46,7 +46,7 @@ export default function LoginPage() {
     } catch (err: any) {
       console.warn("Google authentication error:", err);
       if (err.code === "auth/popup-closed-by-user") {
-        setError("Google sign-in popup was closed. Please select your Google account to log in.");
+        setError("Google sign-in window was closed. Please select your Google account to log in.");
       } else {
         setError("Google sign-in error. Please click 'Sign in with Google' again or use Mobile OTP below.");
       }
@@ -59,7 +59,7 @@ export default function LoginPage() {
     e.preventDefault();
     const cleanPhone = phone.trim();
     if (!cleanPhone) {
-      setError("Please enter your mobile phone number.");
+      setError("Please enter a valid mobile phone number.");
       return;
     }
     setLoading(true);
@@ -72,7 +72,7 @@ export default function LoginPage() {
       setOtpSent(true);
     } catch (err: any) {
       console.error("Error sending phone OTP:", err);
-      setError(err.message || "Failed to send SMS OTP to this phone number. Please check format (e.g. 9876543210).");
+      setError(err.message || "Failed to send SMS OTP code to this mobile number. Please check format (e.g. 9876543210).");
     } finally {
       setLoading(false);
     }
@@ -111,18 +111,18 @@ export default function LoginPage() {
       <div id="recaptcha-container"></div>
 
       <div className="w-full max-w-4xl overflow-hidden rounded-3xl border border-slate-800 bg-[#0e131f] shadow-2xl grid grid-cols-1 md:grid-cols-2">
-        {/* Left Panel: Clean Auth Options (Google & Mobile Phone ONLY) */}
+        {/* Left Panel: EXCLUSIVELY Google & Mobile Phone Number Login Options */}
         <div className="p-8 sm:p-10 flex flex-col justify-between space-y-6 bg-[#0b0f19]">
           <div className="space-y-6">
             <div className="space-y-2">
               <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 bg-emerald-950/80 px-3 py-1 rounded-full border border-emerald-500/40 shadow-sm">
-                <ShieldCheck className="h-3.5 w-3.5" /> Firebase Secure Auth
+                <ShieldCheck className="h-3.5 w-3.5" /> Firebase Authentication
               </span>
               <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
                 Sign in to Interview with Abhi
               </h1>
               <p className="text-xs text-slate-400 font-medium">
-                Choose your login method below to start AI mock interview practice
+                Choose your preferred sign-in method to start your practice session
               </p>
             </div>
 
@@ -132,10 +132,10 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* Main Auth Option 1: Google Authentication */}
-            <div className="space-y-3">
+            {/* OPTION 1: Google Account Sign-In */}
+            <div className="space-y-2">
               <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 block">
-                Option 1: Google Account
+                Sign in with Google
               </span>
               <button
                 type="button"
@@ -161,7 +161,9 @@ export default function LoginPage() {
                     </div>
                   </div>
                 </div>
-                <ArrowRight className="h-4 w-4 text-emerald-400 group-hover:translate-x-1 transition-transform" />
+                <span className="text-xs font-bold text-emerald-400 bg-emerald-950/80 px-3 py-1 rounded-full border border-emerald-500/40">
+                  Google
+                </span>
               </button>
             </div>
 
@@ -175,10 +177,10 @@ export default function LoginPage() {
               </span>
             </div>
 
-            {/* Main Auth Option 2: Mobile Phone Number OTP */}
+            {/* OPTION 2: Mobile Phone Number OTP Sign-In */}
             <div className="space-y-3">
               <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 block">
-                Option 2: Mobile Phone Number OTP
+                Sign in with Mobile Phone Number
               </span>
 
               {!otpSent ? (
@@ -241,7 +243,7 @@ export default function LoginPage() {
           </div>
 
           <div className="text-center text-xs text-slate-500 font-medium">
-            Protected by Firebase OAuth & Recaptcha Verification
+            Protected by Firebase Google & Phone Verification
           </div>
         </div>
 
