@@ -110,25 +110,25 @@ class GeminiService:
     ) -> List[Dict[str, Any]]:
         """Generate questions tailored to target role and interview mode with automatic key rotation."""
         prompt = f"""
-You are an expert interviewer conducting a '{interview_type.upper()}' interview for the role of '{target_role}'.
-Candidate Resume Content:
+You are an expert Principal Technical & HR Interviewer conducting a '{interview_type.upper()}' interview for the candidate applying for '{target_role}'.
+
+CANDIDATE RESUME FULL CONTENT:
 {resume_summary}
 
-CRITICAL MANDATORY RULES:
-1. QUESTION #1 MUST ALWAYS BE A PERSONAL SELF-INTRODUCTION QUESTION!
-   (e.g., "Welcome to your interview for {target_role}! To start off, please introduce yourself, sharing a brief overview of your background, key technical skills, and major projects listed on your resume.")
-2. Questions #2 through #{num_questions} MUST cover core domain knowledge, technical concepts, problem-solving, and resume projects relevant to '{target_role}'.
+STRICT MANDATORY RULES FOR GENERATING QUESTIONS:
+1. QUESTION #1 MUST BE A PERSONAL SELF-INTRODUCTION BASED ON RESUME:
+   "Welcome to your interview for {target_role}! To start off, please introduce yourself, sharing a brief overview of your background, key technical skills, internships, and major projects listed in your resume."
 
-Interview Type Focus for Questions #2-{num_questions}:
-- If 'hr': Focus on HR questions, cultural fit, salary expectations, motivation, conflict resolution, work ethics.
-- If 'technical': Focus on core engineering domain knowledge, technical concepts, problem solving, system design and specific projects in the resume.
-- If 'non_technical': Focus on communication, logical reasoning, aptitude, project management, decision making under ambiguity.
+2. QUESTIONS #2 THROUGH #{num_questions} MUST BE 100% EXCLUSIVELY BASED ON THE CANDIDATE'S RESUME:
+   - YOU MUST DIRECTLY NAME AND REFERENCE specific project titles, internship companies/roles, programming languages, frameworks, databases, tools, APIs, and achievements extracted directly from the candidate's resume text above!
+   - DO NOT ASK GENERIC TEXTBOOK OR GENERAL KNOWLEDGE QUESTIONS (e.g. Do NOT ask "What is Python?", "What is REST API?", or generic theory).
+   - Ask directly about how they built their resume projects, the architecture choices they made, internship responsibilities, and how they used the specific tools listed on their resume.
 
 Generate exactly {num_questions} questions.
 Return a valid JSON array of objects, where each object has:
 - "id": number (1 to {num_questions})
 - "type": "hr" | "technical" | "behavioral" | "analytical"
-- "question": string (Question #1 MUST be self-introduction, Questions #2-{num_questions} reference candidate resume details)
+- "question": string (Question #1 is self-introduction, Questions #2-{num_questions} MUST explicitly cite specific resume project names, tools, skills, or internships)
 - "difficulty": "Easy" | "Medium" | "Hard"
 
 Respond ONLY with valid JSON array, no markdown codeblocks or extra text.
@@ -144,37 +144,44 @@ Respond ONLY with valid JSON array, no markdown codeblocks or extra text.
                 logger.error(f"Gemini API JSON parsing error: {e}")
 
         if not parsed_questions or not isinstance(parsed_questions, list) or len(parsed_questions) == 0:
-            # Intelligent Fallback questions tailored to interview_type with Question #1 as Self-Introduction
+            # Dynamically extract projects, tools, or skills mentioned in the resume summary
+            skills_in_resume = []
+            for kw in ["python", "react", "node.js", "sql", "machine learning", "fastapi", "django", "java", "c++", "aws", "docker", "docker-compose", "pytorch", "tensorflow", "opencv"]:
+                if kw in resume_summary.lower():
+                    skills_in_resume.append(kw.title())
+
+            tech_context = ", ".join(skills_in_resume[:3]) if skills_in_resume else "your core technical stack"
+
             if interview_type == "hr":
                 parsed_questions = [
                     {
                         "id": 1,
                         "type": "hr",
-                        "question": f"Welcome to your interview for {target_role}! To start off, please introduce yourself, sharing a brief overview of your background, key technical skills, and experience listed in your resume.",
+                        "question": f"Welcome to your interview for {target_role}! To start off, please introduce yourself, sharing a brief overview of your background, key technical skills, internships, and experience listed in your resume.",
                         "difficulty": "Easy",
                     },
                     {
                         "id": 2,
                         "type": "hr",
-                        "question": "What are your salary expectations and availability to start?",
+                        "question": f"In your resume, you highlighted projects using {tech_context}. What motivated you to choose those specific tools and frameworks for your implementations?",
                         "difficulty": "Easy",
                     },
                     {
                         "id": 3,
                         "type": "hr",
-                        "question": "Describe a situation where you had a conflict with a teammate or manager and how you resolved it.",
+                        "question": "Walk me through your key responsibilities and learnings during your major internship or project work listed in your resume.",
                         "difficulty": "Medium",
                     },
                     {
                         "id": 4,
                         "type": "hr",
-                        "question": "Where do you see yourself professionally in the next 3 to 5 years?",
+                        "question": "Describe a difficult technical conflict or roadblock you faced while executing a team project from your resume, and how you resolved it.",
                         "difficulty": "Medium",
                     },
                     {
                         "id": 5,
                         "type": "hr",
-                        "question": "How do you maintain work-life balance and handle stressful project deadlines?",
+                        "question": f"Where do you see yourself advancing professionally in {target_role} over the next 3 to 5 years?",
                         "difficulty": "Medium",
                     },
                 ]
@@ -183,31 +190,31 @@ Respond ONLY with valid JSON array, no markdown codeblocks or extra text.
                     {
                         "id": 1,
                         "type": "analytical",
-                        "question": f"Welcome to your interview for {target_role}! To start off, please introduce yourself, sharing a brief overview of your background, key skills, and experience listed in your resume.",
+                        "question": f"Welcome to your interview for {target_role}! To start off, please introduce yourself, sharing a brief overview of your background, key skills, internships, and experience listed in your resume.",
                         "difficulty": "Easy",
                     },
                     {
                         "id": 2,
                         "type": "analytical",
-                        "question": f"How do you prioritize competing tasks when managing a project in {target_role}?",
+                        "question": f"Looking at your resume projects, how did you manage timeline deadlines and prioritize competing features during development?",
                         "difficulty": "Easy",
                     },
                     {
                         "id": 3,
                         "type": "analytical",
-                        "question": "Walk me through your decision-making process when dealing with incomplete data.",
+                        "question": f"Walk me through your decision-making process when choosing technical trade-offs in your major resume projects using {tech_context}.",
                         "difficulty": "Medium",
                     },
                     {
                         "id": 4,
                         "type": "analytical",
-                        "question": "How do you communicate complex technical concepts to non-technical stakeholders?",
+                        "question": "How did you communicate system designs and project deliverables to non-technical team members or stakeholders during your project/internship work?",
                         "difficulty": "Medium",
                     },
                     {
                         "id": 5,
                         "type": "analytical",
-                        "question": "Describe a project that failed or missed its goals, and what key lessons you learned.",
+                        "question": "Describe a key project feature or experiment from your resume that did not perform as expected, and how you analyzed the root cause to fix it.",
                         "difficulty": "Hard",
                     },
                 ]
@@ -216,31 +223,31 @@ Respond ONLY with valid JSON array, no markdown codeblocks or extra text.
                     {
                         "id": 1,
                         "type": "technical",
-                        "question": f"Welcome to your interview for {target_role}! To start off, please introduce yourself, sharing a brief overview of your background, key technical skills, and experience listed in your resume.",
+                        "question": f"Welcome to your interview for {target_role}! To start off, please introduce yourself, sharing a brief overview of your background, key technical skills, internships, and experience listed in your resume.",
                         "difficulty": "Easy",
                     },
                     {
                         "id": 2,
                         "type": "technical",
-                        "question": f"What are the core fundamentals and methodologies you apply in {target_role}?",
-                        "difficulty": "Easy",
+                        "question": f"In your resume, you listed experience with {tech_context}. Walk me through the technical architecture of your major project and how you built it.",
+                        "difficulty": "Medium",
                     },
                     {
                         "id": 3,
                         "type": "technical",
-                        "question": f"Explain a complex technical problem you solved in {target_role} and the tools you used.",
+                        "question": f"For the key project listed on your resume, what were the biggest technical engineering challenges you encountered, and how did you solve them using {tech_context}?",
                         "difficulty": "Medium",
                     },
                     {
                         "id": 4,
                         "type": "technical",
-                        "question": "How do you ensure quality control, testing, and safety standards in your engineering projects?",
+                        "question": "How did you handle error handling, code modularity, and quality control standards across your resume projects and internships?",
                         "difficulty": "Medium",
                     },
                     {
                         "id": 5,
                         "type": "technical",
-                        "question": "Walk me through how you optimize performance, throughput, or efficiency in your designs.",
+                        "question": f"Walk me through how you optimized performance, throughput, response times, or data pipelines in your major resume project.",
                         "difficulty": "Hard",
                     },
                 ]
@@ -262,21 +269,28 @@ Respond ONLY with valid JSON array, no markdown codeblocks or extra text.
         interview_type: str,
         transcript: List[Dict[str, str]],
         next_index: int,
+        resume_summary: str = "",
     ) -> str:
-        """Generate a contextual, adaptive follow-up question using API key rotation."""
+        """Generate a contextual, adaptive follow-up question strictly based on candidate resume & answer."""
         last_answer = ""
         for t in reversed(transcript):
             if t.get("role") == "user":
                 last_answer = t.get("text", "")
                 break
 
+        resume_section = f"\nCANDIDATE RESUME CONTENT:\n{resume_summary[:3000]}\n" if resume_summary else ""
+
         prompt = f"""
-You are an expert interviewer conducting a '{interview_type.upper()}' interview for '{target_role}'.
-Candidate's Previous Answer:
+You are an expert Principal Interviewer conducting a '{interview_type.upper()}' interview for '{target_role}'.
+{resume_section}
+Candidate's Spoken Response to Previous Question:
 "{last_answer}"
 
-Based directly on what the candidate just said, generate a concise, natural follow-up question (1-2 sentences max).
-Acknowledge key points of their response and probe deeper into their technical reasoning, choices, or scenario handling.
+STRICT RULE FOR FOLLOW-UP QUESTION:
+- This follow-up question MUST BE 100% BASED EXCLUSIVELY ON THE CANDIDATE'S RESUME (their specific skills, internships, project titles, frameworks, tools, and technical experience).
+- Directly cite or reference specific projects, tools (e.g. React, Python, SQL, Docker, FastAPI), or internship responsibilities listed in their resume and mentioned in their answer!
+- DO NOT ask generic textbook or non-resume questions. Ask how they implemented, scaled, or resolved trade-offs in their resume projects.
+- Keep the follow-up question concise (1-2 natural sentences max).
 
 Respond ONLY with the follow-up question text.
 """
@@ -286,8 +300,8 @@ Respond ONLY with the follow-up question text.
 
         # Intelligent Fallback context-aware follow-up
         if last_answer:
-            return f"That's insightful. Regarding what you mentioned about your approach, can you elaborate on the key challenges or metrics you encountered while executing that?"
-        return "Can you elaborate further on your experience with that?"
+            return f"That's insightful. Regarding what you mentioned about your resume project implementation, can you elaborate on the key technical trade-offs or metrics you handled?"
+        return "Can you elaborate further on your specific technical contributions and architecture choices in that resume project?"
 
     def evaluate_interview(
         self, target_role: str, transcript: List[Dict[str, str]]

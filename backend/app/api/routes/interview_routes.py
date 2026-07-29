@@ -32,13 +32,18 @@ def start_interview(request: StartInterviewRequest, db: Session = Depends(get_db
     resume_summary = "General Engineering experience."
     target_role = request.target_role
 
+    resume = None
     if request.resume_id:
         resume = db.query(Resume).filter(Resume.id == request.resume_id).first()
-        if resume and resume.raw_text:
-            resume_summary = resume.raw_text[:4000]
-            # Auto-detect domain if default role
-            if not target_role or target_role in ("General Engineering", "Full Stack Software Engineer"):
-                target_role = gemini_service.auto_detect_domain(resume.raw_text[:3000])
+    
+    if not resume:
+        # Auto-fetch candidate's latest uploaded resume if resume_id wasn't explicitly passed
+        resume = db.query(Resume).order_by(Resume.id.desc()).first()
+
+    if resume and resume.raw_text:
+        resume_summary = resume.raw_text
+        if not target_role or target_role in ("General Engineering", "Full Stack Software Engineer"):
+            target_role = gemini_service.auto_detect_domain(resume.raw_text[:3000])
 
     mode_name = (request.interview_type or "technical").upper()
     questions = gemini_service.generate_interview_questions(
@@ -112,12 +117,14 @@ def answer_question(
     is_finished = next_index >= total_questions
 
     if not is_finished:
+        resume_text = interview.resume.raw_text if interview.resume and interview.resume.raw_text else ""
         try:
             followup_q = gemini_service.generate_followup_question(
                 target_role=interview.target_role or "Software Engineer",
                 interview_type="technical",
                 transcript=current_transcript,
                 next_index=next_index,
+                resume_summary=resume_text,
             )
         except Exception:
             if next_index < len(questions_list):

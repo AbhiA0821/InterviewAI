@@ -11,7 +11,23 @@ export function getIndianEnglishVoice(
 ): SpeechSynthesisVoice | null {
   if (!voices || voices.length === 0) return null;
 
-  const isFemale = gender === "female" || gender === "tanya" || gender === "riya";
+  const g = (gender || "").toLowerCase();
+  const isFemale = g === "female" || g === "tanya" || g === "riya";
+
+  const femaleKeywords = [
+    "neerja", "heera", "veena", "sangeeta", "ananya", "kavya",
+    "zira", "hazel", "female", "woman", "girl", "aria", "jenny",
+    "catherine", "linda", "samantha", "victoria", "karen", "eva",
+    "emma", "amy", "joanna", "susan", "stacy", "nicole"
+  ];
+
+  const maleKeywords = [
+    "prabhat", "ravi", "rishi", "karan", "male", "guy", "ryan",
+    "david", "mark", "george", "steffan", "james", "boy", "man",
+    "daniel", "brian", "christopher", "eric", "alexander", "rishi"
+  ];
+
+  const matchesAny = (name: string, keywords: string[]) => keywords.some((kw) => name.includes(kw));
 
   const parse = (v: SpeechSynthesisVoice) => {
     const name = v.name.toLowerCase();
@@ -22,78 +38,66 @@ export function getIndianEnglishVoice(
       name.includes("india") ||
       name.includes("indian") ||
       name.includes("en-in");
-    const isNaturalNeural = name.includes("natural") || name.includes("neural") || name.includes("online");
-    return { name, lang, isIndianLang, isNaturalNeural };
+    const isExplicitFemale = matchesAny(name, femaleKeywords);
+    const isExplicitMale = matchesAny(name, maleKeywords);
+    return { name, lang, isIndianLang, isExplicitFemale, isExplicitMale };
   };
 
-  // Tier 1: Highest quality Natural / Neural Indian English Voice matching gender
-  const tier1Natural = voices.find((v) => {
-    const { name, isIndianLang, isNaturalNeural } = parse(v);
-    if (!isIndianLang && !name.includes("india")) return false;
-    if (isFemale) {
-      return (
-        name.includes("neerja") ||
-        (isNaturalNeural && (name.includes("female") || !name.includes("male")))
-      );
-    } else {
-      return (
-        name.includes("prabhat") ||
-        (isNaturalNeural && (name.includes("male") || !name.includes("female")))
-      );
-    }
-  });
+  if (isFemale) {
+    // 1. Explicit Female Indian Voice (Neerja, Heera, Veena, Sangeeta)
+    const indianFemale = voices.find((v) => {
+      const { isIndianLang, isExplicitFemale } = parse(v);
+      return isIndianLang && isExplicitFemale;
+    });
+    if (indianFemale) return indianFemale;
 
-  if (tier1Natural) return tier1Natural;
+    // 2. Any Indian Voice that is NOT explicitly male
+    const indianNonMale = voices.find((v) => {
+      const { isIndianLang, isExplicitMale } = parse(v);
+      return isIndianLang && !isExplicitMale;
+    });
+    if (indianNonMale) return indianNonMale;
 
-  // Tier 2: Standard Indian English Voices matching gender (Neerja, Prabhat, Heera, Veena, Rishi, Ravi, Google Indian English)
-  const tier2 = voices.find((v) => {
-    const { name, isIndianLang } = parse(v);
-    if (isFemale) {
-      const matchesFemale =
-        name.includes("neerja") ||
-        name.includes("heera") ||
-        name.includes("veena") ||
-        name.includes("sangeeta") ||
-        name.includes("ananya") ||
-        name.includes("kavya");
-      if (matchesFemale) return true;
-      if (isIndianLang && (name.includes("female") || name.includes("zira") || !name.includes("male"))) {
-        return true;
-      }
-    } else {
-      const matchesMale =
-        name.includes("prabhat") ||
-        name.includes("ravi") ||
-        name.includes("rishi") ||
-        name.includes("karan");
-      if (matchesMale) return true;
-      if (isIndianLang && (name.includes("male") || !name.includes("female"))) {
-        return true;
-      }
-    }
-    return false;
-  });
+    // 3. Any Female English Voice
+    const englishFemale = voices.find((v) => {
+      const { lang, isExplicitFemale } = parse(v);
+      return lang.startsWith("en") && isExplicitFemale;
+    });
+    if (englishFemale) return englishFemale;
 
-  if (tier2) return tier2;
+    return voices.find((v) => v.lang.startsWith("en")) || voices[0] || null;
+  } else {
+    // Male Voice Selection (STRICT: Never return an explicit female voice)
+    // 1. Explicit Male Indian Voice (Prabhat, Ravi, Rishi, Karan)
+    const indianMale = voices.find((v) => {
+      const { isIndianLang, isExplicitMale } = parse(v);
+      return isIndianLang && isExplicitMale;
+    });
+    if (indianMale) return indianMale;
 
-  // Tier 3: Any Indian English voice regardless of gender
-  const tier3AnyIndian = voices.find((v) => {
-    const { isIndianLang } = parse(v);
-    return isIndianLang;
-  });
+    // 2. Any Indian Voice that is explicitly NOT female
+    const indianNonFemale = voices.find((v) => {
+      const { isIndianLang, isExplicitFemale } = parse(v);
+      return isIndianLang && !isExplicitFemale;
+    });
+    if (indianNonFemale) return indianNonFemale;
 
-  if (tier3AnyIndian) return tier3AnyIndian;
+    // 3. Explicit Male English Voice (Guy, David, Ryan, George, etc.)
+    const englishMale = voices.find((v) => {
+      const { lang, isExplicitMale, isExplicitFemale } = parse(v);
+      return lang.startsWith("en") && isExplicitMale && !isExplicitFemale;
+    });
+    if (englishMale) return englishMale;
 
-  // Tier 4: Natural / Neural English fallback
-  const tier4Natural = voices.find((v) => {
-    const { name, lang } = parse(v);
-    return (
-      lang.startsWith("en") &&
-      (name.includes("natural") || name.includes("neural") || name.includes("google") || name.includes("online"))
-    );
-  });
+    // 4. Any English Voice that is NOT explicitly female
+    const englishNonFemale = voices.find((v) => {
+      const { lang, isExplicitFemale } = parse(v);
+      return lang.startsWith("en") && !isExplicitFemale;
+    });
+    if (englishNonFemale) return englishNonFemale;
 
-  return tier4Natural || voices.find((v) => v.lang.startsWith("en")) || voices[0] || null;
+    return voices[0] || null;
+  }
 }
 
 /**

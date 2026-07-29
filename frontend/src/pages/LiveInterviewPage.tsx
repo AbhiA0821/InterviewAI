@@ -74,6 +74,9 @@ export default function LiveInterviewPage() {
   const [cameraActive, setCameraActive] = useState(true);
   const [micActive, setMicActive] = useState(true);
   const [showTranscriptDrawer, setShowTranscriptDrawer] = useState(false);
+  const [activeKeyPoolCount, setActiveKeyPoolCount] = useState<number>(1);
+  const [currentKeyIndex, setCurrentKeyIndex] = useState<number>(1);
+  const [isWsConnected, setIsWsConnected] = useState<boolean>(false);
 
   const transcriptEndRef = useRef<HTMLDivElement | null>(null);
   const recognitionRef = useRef<any>(null);
@@ -82,6 +85,7 @@ export default function LiveInterviewPage() {
   const shouldKeepListeningRef = useRef<boolean>(false);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const ttsTimeoutRef = useRef<any>(null);
+  const wsRef = useRef<WebSocket | null>(null);
 
   // Auto-trigger proctored fullscreen mode directly on load
   useEffect(() => {
@@ -98,6 +102,66 @@ export default function LiveInterviewPage() {
       window.removeEventListener("click", handleFirstInteraction);
     };
   }, []);
+
+  // Connect WebSocket to backend Gemini Live endpoint
+  useEffect(() => {
+    if (!id) return;
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const host = window.location.host;
+    const wsUrl = `${protocol}//${host}/ws/interview/${id}`;
+
+    const ws = new WebSocket(wsUrl);
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      console.log("[WS] Connected to Gemini Live Interview socket.");
+      setIsWsConnected(true);
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "session_started") {
+          setActiveKeyPoolCount(data.active_key_pool_count || 1);
+          setCurrentKeyIndex(data.current_key_index || 1);
+        } else if (data.type === "ai_thinking") {
+          setAvatarStatus("thinking");
+        } else if (data.type === "ai_response") {
+          if (data.active_key_pool_count) setActiveKeyPoolCount(data.active_key_pool_count);
+          if (data.current_key_index) setCurrentKeyIndex(data.current_key_index);
+
+          setInterview((prev) => {
+            if (!prev) return prev;
+            const updatedTranscript = [
+              ...(prev.transcript || []),
+              { role: "interviewer", text: data.text, timestamp: new Date().toISOString() },
+            ];
+            return {
+              ...prev,
+              current_question_index: data.question_index,
+              transcript: updatedTranscript as any,
+            };
+          });
+
+          speakText(data.text);
+        } else if (data.type === "interview_completed") {
+          handleFinishInterview();
+        }
+      } catch (e) {
+        console.warn("[WS] Failed to parse message:", e);
+      }
+    };
+
+    ws.onclose = () => {
+      setIsWsConnected(false);
+    };
+
+    return () => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
+    };
+  }, [id]);
 
   // Pre-load speech synthesis voices
   useEffect(() => {
@@ -241,24 +305,29 @@ export default function LiveInterviewPage() {
       if (micActive) startAutoVoiceListening();
     };
 
-    // Humanize text string with conversational pauses for smooth Indian English prosody
+    // Humanize text string with conversational pauses and phonetic spelling for smooth Indian English prosody
     const humanizedText = text
-      .replace(/([.?!])\s*/g, "$1 ")
+      .replace(/\bAI\b/g, "A.I.")
+      .replace(/\bHR\b/g, "H.R.")
+      .replace(/\bAPI\b/g, "A.P.I.")
+      .replace(/\bSQL\b/g, "Sequel")
+      .replace(/([.?!])\s*/g, "$1 ... ")
       .replace(/,\s*/g, ", ");
 
     const utterance = new SpeechSynthesisUtterance(humanizedText);
     utteranceRef.current = utterance; // Prevent garbage collection bug in Chrome/Edge
 
     utterance.lang = "en-IN"; // Enforce authentic Indian English phonetic synthesis
-    utterance.rate = 0.92; // Natural, humanized conversational Indian English pace
+    utterance.rate = 0.89; // Humanized conversational pace
     utterance.volume = 1.0;
 
-    if (interviewerGender === "female") {
+    const isFemale = interviewerGender === "female" || (interviewerGender as string) === "tanya" || (interviewerGender as string) === "riya";
+    if (isFemale) {
       utterance.pitch = 1.05; // Warm, friendly Indian female interviewer tone
     } else if (interviewerGender === "male2") {
-      utterance.pitch = 1.0; // Professional, warm Indian male HR tone
+      utterance.pitch = 0.88; // Deep, natural Indian male HR manager tone
     } else {
-      utterance.pitch = 0.96; // Confident, clear Indian male AI tech lead tone
+      utterance.pitch = 0.84; // Deep, confident Indian male AI tech lead tone
     }
 
     const targetVoice = getIndianEnglishVoice(voices, interviewerGender);
@@ -336,6 +405,29 @@ export default function LiveInterviewPage() {
     setError("");
     const currentAns = voiceTranscript;
     setVoiceTranscript("");
+
+    // Update transcript locally for instantaneous visual feedback
+    setInterview((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        transcript: [
+          ...(prev.transcript || []),
+          { role: "user", text: currentAns, timestamp: new Date().toISOString() },
+        ] as any,
+      };
+    });
+
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      try {
+        wsRef.current.send(JSON.stringify({ type: "user_answer", text: currentAns }));
+        return;
+      } catch (e) {
+        console.warn("[WS] Fallback to REST HTTP post:", e);
+      } finally {
+        setSubmitting(false);
+      }
+    }
 
     try {
       const res = await interviewService.answerQuestion(targetInterviewId, currentAns);
@@ -476,10 +568,21 @@ export default function LiveInterviewPage() {
           </div>
         </div>
 
-        {/* Center Countdown Timer */}
-        <div className="rounded-full border border-slate-800 bg-slate-950/90 px-3.5 py-1 text-xs font-mono font-bold text-emerald-400 flex items-center gap-2 shadow-inner">
-          <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span>{formatTimer(timerSeconds)} Mins</span>
+        {/* Center Countdown Timer & Gemini Pool Badge */}
+        <div className="flex items-center gap-2">
+          <div className="rounded-full border border-slate-800 bg-slate-950/90 px-3.5 py-1 text-xs font-mono font-bold text-emerald-400 flex items-center gap-2 shadow-inner">
+            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>{formatTimer(timerSeconds)} Mins</span>
+          </div>
+
+          <div
+            className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full border border-teal-500/40 bg-teal-950/80 text-teal-300 text-xs font-bold shadow-sm"
+            title="Active Gemini API Key Rotation Pool for unlimited live tokens"
+          >
+            <span className={`h-2 w-2 rounded-full ${isWsConnected ? "bg-teal-400" : "bg-amber-400 animate-pulse"}`} />
+            <Sparkles className="h-3.5 w-3.5 text-teal-400 animate-spin" style={{ animationDuration: "8s" }} />
+            <span>⚡ Gemini Pool (Key {currentKeyIndex}/{activeKeyPoolCount})</span>
+          </div>
         </div>
 
         {/* Top Right Controls & Fullscreen Mode */}

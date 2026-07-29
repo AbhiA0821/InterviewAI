@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from app.config import get_settings
-from app.api.routes import auth_routes, feedback_routes, interview_routes, resume_routes
+from app.api.routes import auth_routes, feedback_routes, interview_routes, resume_routes, ws_interview
 from app.database.init_db import init_db
 
 settings = get_settings()
@@ -43,6 +43,8 @@ app.include_router(auth_routes.router, prefix="/api/auth", tags=["auth"])
 app.include_router(resume_routes.router, prefix="/api/resume", tags=["resume"])
 app.include_router(interview_routes.router, prefix="/api/interview", tags=["interview"])
 app.include_router(feedback_routes.router, prefix="/api/feedback", tags=["feedback"])
+app.include_router(ws_interview.router, tags=["ws"])
+
 
 
 @app.get("/api/health")
