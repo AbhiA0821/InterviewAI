@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { authService } from "../services/authService";
 import { Eye, Mail, Sparkles } from "lucide-react";
-import { signInWithGooglePopup } from "../services/firebase";
+import { signInWithGooglePopup, checkGoogleRedirectResult } from "../services/firebase";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -10,6 +10,25 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    const handleRedirectResult = async () => {
+      try {
+        const payload = await checkGoogleRedirectResult();
+        if (payload) {
+          setLoading(true);
+          await authService.loginWithGoogle(payload);
+          sessionStorage.setItem("google_authenticated", "true");
+          navigate("/");
+        }
+      } catch (err) {
+        console.warn("Error handling Google redirect result:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    handleRedirectResult();
+  }, [navigate]);
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
@@ -33,9 +52,11 @@ export default function LoginPage() {
         authPayload = await signInWithGooglePopup();
       }
 
-      await authService.loginWithGoogle(authPayload);
-      sessionStorage.setItem("google_authenticated", "true");
-      navigate("/");
+      if (authPayload) {
+        await authService.loginWithGoogle(authPayload);
+        sessionStorage.setItem("google_authenticated", "true");
+        navigate("/");
+      }
     } catch (err: any) {
       console.warn("Google authentication warning, completing session login:", err);
       const cleanEmail = email.trim().toLowerCase() || `candidate_${Date.now()}@interviewai.com`;

@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyDp_50V-dRwcfcUQaPz2iasIzfpb01umJA",
@@ -13,30 +13,54 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: "select_account" });
 
 export const signInWithGooglePopup = async () => {
   try {
     const result = await signInWithPopup(auth, googleProvider);
     const user = result.user;
     const idToken = await user.getIdToken();
-    const email = user.email || "candidate@interviewai.com";
-    const name = user.displayName || email.split("@")[0].charAt(0).toUpperCase() + email.split("@")[0].slice(1);
+    const email = user.email || "";
+    const name = user.displayName || (email ? email.split("@")[0].charAt(0).toUpperCase() + email.split("@")[0].slice(1) : "Google Candidate");
     return {
       token: idToken,
       email: email,
       display_name: name,
-      photo_url: user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
+      photo_url: user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${email || 'user'}`,
       google_id: user.uid,
     };
-  } catch (error) {
-    console.info("Google OAuth popup fallback activated:", error);
-    const fallbackId = Date.now();
-    return {
-      token: `google-oauth-token-${fallbackId}`,
-      email: `candidate_${fallbackId}@interviewai.com`,
-      display_name: "Candidate",
-      photo_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${fallbackId}`,
-      google_id: `google-uid-${fallbackId}`,
-    };
+  } catch (error: any) {
+    console.warn("Google Popup Auth error, attempting mobile redirect auth:", error);
+    if (error.code === "auth/popup-blocked" || error.code === "auth/popup-closed-by-user" || /Android|iPhone|iPad/i.test(navigator.userAgent)) {
+      try {
+        await signInWithRedirect(auth, googleProvider);
+        return null;
+      } catch (redirectErr) {
+        console.warn("Redirect auth failed:", redirectErr);
+      }
+    }
+    throw error;
   }
+};
+
+export const checkGoogleRedirectResult = async () => {
+  try {
+    const result = await getRedirectResult(auth);
+    if (result && result.user) {
+      const user = result.user;
+      const idToken = await user.getIdToken();
+      const email = user.email || "";
+      const name = user.displayName || (email ? email.split("@")[0].charAt(0).toUpperCase() + email.split("@")[0].slice(1) : "Google Candidate");
+      return {
+        token: idToken,
+        email: email,
+        display_name: name,
+        photo_url: user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${email || 'user'}`,
+        google_id: user.uid,
+      };
+    }
+  } catch (e) {
+    console.warn("Error checking Google redirect result:", e);
+  }
+  return null;
 };
