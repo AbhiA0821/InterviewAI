@@ -1,5 +1,14 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult } from "firebase/auth";
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
+  RecaptchaVerifier,
+  signInWithPhoneNumber,
+  ConfirmationResult,
+} from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyDp_50V-dRwcfcUQaPz2iasIzfpb01umJA",
@@ -63,4 +72,35 @@ export const checkGoogleRedirectResult = async () => {
     console.warn("Error checking Google redirect result:", e);
   }
   return null;
+};
+
+export const setupRecaptcha = (containerId: string = "recaptcha-container") => {
+  if (!(window as any).recaptchaVerifier) {
+    (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
+      size: "invisible",
+      callback: () => {},
+    });
+  }
+  return (window as any).recaptchaVerifier;
+};
+
+export const sendPhoneOtp = async (phoneNumber: string, containerId: string = "recaptcha-container"): Promise<ConfirmationResult> => {
+  const verifier = setupRecaptcha(containerId);
+  const formattedPhone = phoneNumber.startsWith("+") ? phoneNumber : `+91${phoneNumber.replace(/\D/g, "")}`;
+  return await signInWithPhoneNumber(auth, formattedPhone, verifier);
+};
+
+export const verifyPhoneOtp = async (confirmationResult: ConfirmationResult, otpCode: string) => {
+  const result = await confirmationResult.confirm(otpCode);
+  const user = result.user;
+  const idToken = await user.getIdToken();
+  const phone = user.phoneNumber || "";
+  const name = `Candidate (${phone.slice(-4) || "User"})`;
+  return {
+    token: idToken,
+    email: `${phone.replace(/\+/g, "")}@phone.interviewai.com`,
+    display_name: name,
+    photo_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${phone || 'candidate'}`,
+    google_id: user.uid,
+  };
 };

@@ -118,15 +118,4 @@ def get_current_user_profile(
         except Exception:
             pass
 
-    # Fallback to last created user or default unauthenticated status
-    user = db.query(User).order_by(User.id.desc()).first()
-    if user:
-        return {
-            "authenticated": True,
-            "user_id": user.id,
-            "email": user.email,
-            "display_name": user.display_name,
-            "photo_url": user.photo_url,
-        }
-
     return {"authenticated": False}
