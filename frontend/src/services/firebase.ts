@@ -10,13 +10,21 @@ import {
   ConfirmationResult,
 } from "firebase/auth";
 
+const getFirebaseApiKey = () => {
+  const envKey = import.meta.env.VITE_FIREBASE_API_KEY;
+  if (envKey && typeof envKey === "string" && envKey.trim() !== "" && envKey !== "undefined") {
+    return envKey.trim();
+  }
+  return "AIzaSyDp_50V-dRwcfcUQaPz2iasIzfpb01umJA";
+};
+
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyDp_50V-dRwcfcUQaPz2iasIzfpb01umJA",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "interviewai-d249e.firebaseapp.com",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "interviewai-d249e",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "interviewai-d249e.firebasestorage.app",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "980340256724",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:980340256724:web:a822b8c684a94f4b02b041",
+  apiKey: getFirebaseApiKey(),
+  authDomain: (import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "").trim() || "interviewai-d249e.firebaseapp.com",
+  projectId: (import.meta.env.VITE_FIREBASE_PROJECT_ID || "").trim() || "interviewai-d249e",
+  storageBucket: (import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "").trim() || "interviewai-d249e.firebasestorage.app",
+  messagingSenderId: (import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "").trim() || "980340256724",
+  appId: (import.meta.env.VITE_FIREBASE_APP_ID || "").trim() || "1:980340256724:web:a822b8c684a94f4b02b041",
 };
 
 const app = initializeApp(firebaseConfig);

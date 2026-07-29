@@ -46,10 +46,13 @@ export default function LoginPage() {
       }
     } catch (err: any) {
       console.warn("Google authentication error:", err);
-      if (err.code === "auth/popup-closed-by-user") {
-        setError("Google sign-in window was closed. Please select your Google account to log in.");
+      const errMsg = err?.message || err?.code || String(err);
+      if (err?.code === "auth/popup-closed-by-user" || err?.code === "auth/cancelled-popup-request") {
+        setError("Google sign-in window was closed. Click 'Sign in with Google' to select your account.");
+      } else if (err?.code === "auth/unauthorized-domain") {
+        setError("Firebase Domain Notice: Please add 'interviewai-tvaq.onrender.com' to Authorized Domains in Firebase Console.");
       } else {
-        setError("Google sign-in error. Please click 'Sign in with Google' again or use Mobile OTP below.");
+        setError(`Google Sign-In Notice: ${errMsg}`);
       }
     } finally {
       setLoading(false);
