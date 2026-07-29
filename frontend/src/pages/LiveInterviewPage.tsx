@@ -318,7 +318,7 @@ export default function LiveInterviewPage() {
     utteranceRef.current = utterance; // Prevent garbage collection bug in Chrome/Edge
 
     utterance.lang = "en-IN"; // Enforce authentic Indian English phonetic synthesis
-    utterance.rate = 0.89; // Humanized conversational pace
+    utterance.rate = 1.02; // Brisk, natural human conversational speed
     utterance.volume = 1.0;
 
     const isFemale = interviewerGender === "female" || (interviewerGender as string) === "tanya" || (interviewerGender as string) === "riya";
