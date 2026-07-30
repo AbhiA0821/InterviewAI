@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { authService, UserProfile } from "../../services/authService";
-import { Bot, Edit3, History, LogIn, LogOut, ShieldCheck, Sparkles, UserCheck } from "lucide-react";
+import { Bot, Edit3, History, LogIn, LogOut, ShieldCheck, UserCheck } from "lucide-react";
 
 export const Navbar: React.FC = () => {
   const location = useLocation();
@@ -95,18 +95,6 @@ export const Navbar: React.FC = () => {
           >
             <Bot className="h-4 w-4" />
             <span>Home</span>
-          </Link>
-
-          <Link
-            to="/dashboard"
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-              isActive("/dashboard")
-                ? "bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 shadow-sm"
-                : "text-slate-300 hover:bg-slate-900 hover:text-white"
-            }`}
-          >
-            <Sparkles className="h-4 w-4" />
-            <span>Dashboard</span>
           </Link>
 
           <Link
