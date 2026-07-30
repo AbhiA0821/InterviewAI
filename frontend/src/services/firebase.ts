@@ -1,4 +1,4 @@
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps, getApp } from "firebase/app";
 import {
   getAuth,
   GoogleAuthProvider,
@@ -10,31 +10,71 @@ import {
   ConfirmationResult,
 } from "firebase/auth";
 
-const getFirebaseApiKey = () => {
-  const envKey = import.meta.env.VITE_FIREBASE_API_KEY;
-  if (envKey && typeof envKey === "string" && envKey.trim() !== "" && envKey !== "undefined") {
-    return envKey.trim();
+let firebaseApp = getApps().length ? getApp() : null;
+let authInstance: any = null;
+
+export const getFirebaseAuth = async () => {
+  if (authInstance) return authInstance;
+
+  let apiKey = import.meta.env.VITE_FIREBASE_API_KEY;
+  let authDomain = import.meta.env.VITE_FIREBASE_AUTH_DOMAIN;
+  let projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID;
+  let storageBucket = import.meta.env.VITE_FIREBASE_STORAGE_BUCKET;
+  let messagingSenderId = import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID;
+  let appId = import.meta.env.VITE_FIREBASE_APP_ID;
+
+  // If statically compiled key is missing or is the default fallback, fetch runtime config from FastAPI
+  if (!apiKey || apiKey === "AIzaSyDp_50V-dRwcfcUQaPz2iasIzfpb01umJA" || String(apiKey).includes("undefined")) {
+    try {
+      const res = await fetch("/api/auth/firebase-config");
+      if (res.ok) {
+        const runtimeConfig = await res.json();
+        if (runtimeConfig.apiKey && runtimeConfig.apiKey.length > 5) {
+          apiKey = runtimeConfig.apiKey;
+          authDomain = runtimeConfig.authDomain;
+          projectId = runtimeConfig.projectId;
+          storageBucket = runtimeConfig.storageBucket;
+          messagingSenderId = runtimeConfig.messagingSenderId;
+          appId = runtimeConfig.appId;
+        }
+      }
+    } catch (e) {
+      console.warn("Could not fetch backend runtime firebase config:", e);
+    }
   }
-  return "AIzaSyDp_50V-dRwcfcUQaPz2iasIzfpb01umJA";
+
+  const finalConfig = {
+    apiKey: (apiKey || "AIzaSyDp_50V-dRwcfcUQaPz2iasIzfpb01umJA").trim(),
+    authDomain: (authDomain || "interviewai-d249e.firebaseapp.com").trim(),
+    projectId: (projectId || "interviewai-d249e").trim(),
+    storageBucket: (storageBucket || "interviewai-d249e.firebasestorage.app").trim(),
+    messagingSenderId: (messagingSenderId || "980340256724").trim(),
+    appId: (appId || "1:980340256724:web:a822b8c684a94f4b02b041").trim(),
+  };
+
+  firebaseApp = initializeApp(finalConfig, "interviewai-runtime-app-" + Date.now());
+  authInstance = getAuth(firebaseApp);
+  return authInstance;
 };
 
-const firebaseConfig = {
-  apiKey: getFirebaseApiKey(),
-  authDomain: (import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "").trim() || "interviewai-d249e.firebaseapp.com",
-  projectId: (import.meta.env.VITE_FIREBASE_PROJECT_ID || "").trim() || "interviewai-d249e",
-  storageBucket: (import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "").trim() || "interviewai-d249e.firebasestorage.app",
-  messagingSenderId: (import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "").trim() || "980340256724",
-  appId: (import.meta.env.VITE_FIREBASE_APP_ID || "").trim() || "1:980340256724:web:a822b8c684a94f4b02b041",
+// Initial sync fallback for synchronous listeners
+const initialConfig = {
+  apiKey: "AIzaSyDp_50V-dRwcfcUQaPz2iasIzfpb01umJA",
+  authDomain: "interviewai-d249e.firebaseapp.com",
+  projectId: "interviewai-d249e",
+  storageBucket: "interviewai-d249e.firebasestorage.app",
+  messagingSenderId: "980340256724",
+  appId: "1:980340256724:web:a822b8c684a94f4b02b041",
 };
-
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
+const defaultApp = getApps().length ? getApp() : initializeApp(initialConfig);
+export const auth = getAuth(defaultApp);
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: "select_account" });
 
 export const signInWithGooglePopup = async () => {
   try {
-    const result = await signInWithPopup(auth, googleProvider);
+    const currentAuth = await getFirebaseAuth();
+    const result = await signInWithPopup(currentAuth, googleProvider);
     const user = result.user;
     const idToken = await user.getIdToken();
     const email = user.email || "";
@@ -50,7 +90,8 @@ export const signInWithGooglePopup = async () => {
     console.warn("Google Popup Auth error, attempting mobile redirect auth:", error);
     if (error.code === "auth/popup-blocked" || error.code === "auth/popup-closed-by-user" || /Android|iPhone|iPad/i.test(navigator.userAgent)) {
       try {
-        await signInWithRedirect(auth, googleProvider);
+        const currentAuth = await getFirebaseAuth();
+        await signInWithRedirect(currentAuth, googleProvider);
         return null;
       } catch (redirectErr) {
         console.warn("Redirect auth failed:", redirectErr);
@@ -62,7 +103,8 @@ export const signInWithGooglePopup = async () => {
 
 export const checkGoogleRedirectResult = async () => {
   try {
-    const result = await getRedirectResult(auth);
+    const currentAuth = await getFirebaseAuth();
+    const result = await getRedirectResult(currentAuth);
     if (result && result.user) {
       const user = result.user;
       const idToken = await user.getIdToken();

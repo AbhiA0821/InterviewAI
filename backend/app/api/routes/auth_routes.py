@@ -9,11 +9,32 @@ from app.config import get_settings
 from app.database.session import get_db
 from app.models.user import User
 
+import os
+
 router = APIRouter()
 settings = get_settings()
 
 SECRET_KEY = settings.SECRET_KEY or "interviewai-secret-key-123"
 ALGORITHM = "HS256"
+
+
+@router.get("/firebase-config")
+def get_firebase_runtime_config():
+    """Dynamically return Firebase configuration loaded from runtime environment variables."""
+    api_key = (
+        os.getenv("VITE_FIREBASE_API_KEY")
+        or os.getenv("FIREBASE_API_KEY")
+        or getattr(settings, "FIREBASE_API_KEY", "")
+        or "AIzaSyDp_50V-dRwcfcUQaPz2iasIzfpb01umJA"
+    )
+    return {
+        "apiKey": api_key.strip(),
+        "authDomain": os.getenv("VITE_FIREBASE_AUTH_DOMAIN", "interviewai-d249e.firebaseapp.com").strip(),
+        "projectId": os.getenv("VITE_FIREBASE_PROJECT_ID", "interviewai-d249e").strip(),
+        "storageBucket": os.getenv("VITE_FIREBASE_STORAGE_BUCKET", "interviewai-d249e.firebasestorage.app").strip(),
+        "messagingSenderId": os.getenv("VITE_FIREBASE_MESSAGING_SENDER_ID", "980340256724").strip(),
+        "appId": os.getenv("VITE_FIREBASE_APP_ID", "1:980340256724:web:a822b8c684a94f4b02b041").strip(),
+    }
 
 
 class GoogleAuthRequest(BaseModel):
