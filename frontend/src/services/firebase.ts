@@ -129,9 +129,10 @@ export const checkGoogleRedirectResult = async () => {
   return null;
 };
 
-export const setupRecaptcha = (containerId: string = "recaptcha-container") => {
+export const setupRecaptcha = async (containerId: string = "recaptcha-container") => {
+  const currentAuth = await getFirebaseAuth();
   if (!(window as any).recaptchaVerifier) {
-    (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
+    (window as any).recaptchaVerifier = new RecaptchaVerifier(currentAuth, containerId, {
       size: "invisible",
       callback: () => {},
     });
@@ -140,9 +141,10 @@ export const setupRecaptcha = (containerId: string = "recaptcha-container") => {
 };
 
 export const sendPhoneOtp = async (phoneNumber: string, containerId: string = "recaptcha-container"): Promise<ConfirmationResult> => {
-  const verifier = setupRecaptcha(containerId);
+  const currentAuth = await getFirebaseAuth();
+  const verifier = await setupRecaptcha(containerId);
   const formattedPhone = phoneNumber.startsWith("+") ? phoneNumber : `+91${phoneNumber.replace(/\D/g, "")}`;
-  return await signInWithPhoneNumber(auth, formattedPhone, verifier);
+  return await signInWithPhoneNumber(currentAuth, formattedPhone, verifier);
 };
 
 export const verifyPhoneOtp = async (confirmationResult: ConfirmationResult, otpCode: string) => {

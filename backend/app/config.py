@@ -108,6 +108,7 @@ class Settings(BaseSettings):
         backend_env = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".env"))
         env_file = (backend_env, ".env")
         case_sensitive = True
+        extra = "ignore"
 
 
 @lru_cache
