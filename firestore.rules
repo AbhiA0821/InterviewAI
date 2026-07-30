@@ -1,0 +1,18 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // User profile documents in 'users' collection
+    match /users/{userId} {
+      allow read, write: if request.auth != null && (request.auth.uid == userId || request.auth.token.admin == true);
+    }
+    
+    // Interview results scorecards in 'interview_results' collection
+    match /interview_results/{resultId} {
+      // Candidates can read & write their own interview documents
+      allow read, write: if request.auth != null && (resource == null || resource.data.uid == request.auth.uid || request.auth.token.admin == true);
+      // Admin dashboard read access across all candidate records
+      allow list, read: if request.auth != null;
+    }
+  }
+}

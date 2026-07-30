@@ -80,7 +80,7 @@ class GeminiService:
                     continue
 
             try:
-                models_to_try = ["gemini-2.0-flash", "gemini-2.5-flash", "gemini-flash-latest", "gemini-2.0-flash-lite"]
+                models_to_try = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-flash-latest"]
                 unique_models = []
                 for m in models_to_try:
                     if m and m not in unique_models:

@@ -6,6 +6,7 @@ Supports low-latency audio/text bidirectional communication,
 barge-in interruption signaling, and live Gemini multi-key rotation status.
 """
 
+import asyncio
 import json
 import logging
 from datetime import datetime
@@ -16,6 +17,7 @@ from sqlalchemy.orm import Session
 
 from app.database.session import SessionLocal
 from app.models.interview import Interview
+from app.models.resume import Resume
 from app.services.gemini_service import gemini_service
 
 logger = logging.getLogger(__name__)
@@ -79,13 +81,15 @@ async def websocket_interview_endpoint(websocket: WebSocket, interview_id: int):
                 # Notify frontend AI is thinking
                 await websocket.send_json({"type": "ai_thinking"})
 
-                # Record user response in transcript
+                # Record user response in transcript and commit immediately to DB
                 current_transcript = list(interview.transcript or [])
                 current_transcript.append({
                     "role": "user",
                     "text": user_text,
                     "timestamp": datetime.utcnow().isoformat(),
                 })
+                interview.transcript = current_transcript
+                db.commit()
 
                 next_index = interview.current_question_index + 1
                 questions_list = list(interview.questions or [])
@@ -103,14 +107,33 @@ async def websocket_interview_endpoint(websocket: WebSocket, interview_id: int):
                         if last_res and last_res.raw_text:
                             resume_text = last_res.raw_text
 
-                    # Generate adaptive follow-up using multi-key Gemini pool strictly based on resume & candidate answer
-                    followup_q = gemini_service.generate_followup_question(
-                        target_role=interview.target_role or "Software Engineer",
-                        interview_type="technical",
-                        transcript=current_transcript,
-                        next_index=next_index,
-                        resume_summary=resume_text,
-                    )
+                    # Fast pre-generated question baseline fallback
+                    followup_q = None
+                    if questions_list and next_index < len(questions_list):
+                        followup_q = questions_list[next_index].get("question")
+
+                    # Non-blocking async Gemini call with strict 2.5s timeout
+                    try:
+                        loop = asyncio.get_event_loop()
+                        ai_q = await asyncio.wait_for(
+                            loop.run_in_executor(
+                                None,
+                                gemini_service.generate_followup_question,
+                                interview.target_role or "Software Engineer",
+                                "technical",
+                                current_transcript,
+                                next_index,
+                                resume_text[:1500] if resume_text else "",
+                            ),
+                            timeout=2.5
+                        )
+                        if ai_q and len(ai_q.strip()) > 10:
+                            followup_q = ai_q.strip()
+                    except (asyncio.TimeoutError, Exception) as gen_err:
+                        logger.info(f"[WS] Fast 2.5s response fallback triggered for step #{next_index}: {gen_err}")
+
+                    if not followup_q:
+                        followup_q = f"Thank you. Building on your answer, could you detail how you applied key technical concepts from your resume to solve challenges in {interview.target_role}?"
 
                     current_transcript.append({
                         "role": "interviewer",

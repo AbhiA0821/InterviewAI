@@ -11,6 +11,7 @@ import LoginPage from "./pages/LoginPage";
 import { authService } from "./services/authService";
 import { Loader2 } from "lucide-react";
 
+import AdminDashboardPage from "./pages/AdminDashboardPage";
 import MirrorRoomPage from "./pages/MirrorRoomPage";
 
 // RequireAuth component: Enforces Google Authentication Page FIRST on app start
@@ -140,6 +141,14 @@ function AppContent() {
             element={
               <RequireAuth>
                 <HistoryPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <RequireAuth>
+                <AdminDashboardPage />
               </RequireAuth>
             }
           />

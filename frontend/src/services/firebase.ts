@@ -9,6 +9,7 @@ import {
   signInWithPhoneNumber,
   ConfirmationResult,
 } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 
 let firebaseApp = getApps().length ? getApp() : null;
 let authInstance: any = null;
@@ -73,6 +74,7 @@ const initialConfig = {
 };
 const defaultApp = getApps().length ? getApp() : initializeApp(initialConfig);
 export const auth = getAuth(defaultApp);
+export const firestoreDb = getFirestore(defaultApp);
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: "select_account" });
 
@@ -131,11 +133,25 @@ export const checkGoogleRedirectResult = async () => {
 
 export const setupRecaptcha = async (containerId: string = "recaptcha-container") => {
   const currentAuth = await getFirebaseAuth();
-  if (!(window as any).recaptchaVerifier) {
+  try {
+    if ((window as any).recaptchaVerifier) {
+      try {
+        (window as any).recaptchaVerifier.clear();
+      } catch (e) {}
+      (window as any).recaptchaVerifier = null;
+    }
     (window as any).recaptchaVerifier = new RecaptchaVerifier(currentAuth, containerId, {
       size: "invisible",
       callback: () => {},
+      "expired-callback": () => {
+        try {
+          (window as any).recaptchaVerifier?.clear();
+        } catch (e) {}
+        (window as any).recaptchaVerifier = null;
+      },
     });
+  } catch (e) {
+    console.warn("RecaptchaVerifier setup notice:", e);
   }
   return (window as any).recaptchaVerifier;
 };
@@ -144,7 +160,17 @@ export const sendPhoneOtp = async (phoneNumber: string, containerId: string = "r
   const currentAuth = await getFirebaseAuth();
   const verifier = await setupRecaptcha(containerId);
   const formattedPhone = phoneNumber.startsWith("+") ? phoneNumber : `+91${phoneNumber.replace(/\D/g, "")}`;
-  return await signInWithPhoneNumber(currentAuth, formattedPhone, verifier);
+  try {
+    return await signInWithPhoneNumber(currentAuth, formattedPhone, verifier);
+  } catch (err: any) {
+    console.warn("signInWithPhoneNumber primary attempt notice:", err);
+    // Clear recaptcha verifier and throw for caller fallback handling
+    try {
+      (window as any).recaptchaVerifier?.clear();
+    } catch (e) {}
+    (window as any).recaptchaVerifier = null;
+    throw err;
+  }
 };
 
 export const verifyPhoneOtp = async (confirmationResult: ConfirmationResult, otpCode: string) => {

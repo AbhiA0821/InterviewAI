@@ -1,26 +1,27 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-
 import { interviewService } from "../services/interviewService";
-import { ArrowRight, Calendar, History, Loader2, Mic, Trophy } from "lucide-react";
-
-interface HistoryItem {
-  id: number;
-  target_role: string;
-  status: string;
-  started_at?: string;
-  completed_at?: string;
-  overall_score?: number;
-  technical_score?: number;
-  communication_score?: number;
-  problem_solving_score?: number;
-  confidence_score?: number;
-}
+import { getUserInterviewsFromFirestore, FirestoreInterviewResult } from "../services/firestoreService";
+import { exportInterviewsToExcel, ExcelInterviewRow } from "../utils/excelExport";
+import {
+  ArrowRight,
+  Calendar,
+  FileSpreadsheet,
+  Filter,
+  History,
+  Loader2,
+  Mic,
+} from "lucide-react";
 
 export default function HistoryPage() {
   const navigate = useNavigate();
-  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [history, setHistory] = useState<any[]>([]);
+  const [firestoreHistory, setFirestoreHistory] = useState<FirestoreInterviewResult[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Filters State
+  const [selectedDomain, setSelectedDomain] = useState("All");
+  const [selectedDateFilter, setSelectedDateFilter] = useState("All");
 
   useEffect(() => {
     fetchHistory();
@@ -30,48 +31,185 @@ export default function HistoryPage() {
     try {
       setLoading(true);
       const data = await interviewService.getHistory();
-      setHistory(data);
+      setHistory(data || []);
+
+      // Fetch logged-in user's Firestore records
+      const storedUserJson = localStorage.getItem("user");
+      const userObj = storedUserJson ? JSON.parse(storedUserJson) : null;
+      const userUid = userObj?.uid || localStorage.getItem("user_uid") || "";
+
+      if (userUid) {
+        const fsRecords = await getUserInterviewsFromFirestore(userUid);
+        setFirestoreHistory(fsRecords);
+      }
     } catch (err) {
-      console.error(err);
+      console.error("Error fetching history:", err);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Combine & Filter candidate history items
+  const combinedItems = useMemo(() => {
+    const list: any[] = [];
+
+    // Add Firestore items
+    firestoreHistory.forEach((fs) => {
+      list.push({
+        id: fs.id || `fs_${Math.random()}`,
+        target_role: fs.interviewDomain,
+        status: "completed",
+        overall_score: fs.score,
+        started_at: fs.interviewDate,
+        duration: fs.interviewDuration,
+        feedback: fs.overallFeedback,
+        strengths: fs.strengths,
+        weaknesses: fs.weaknesses,
+        percentage: fs.percentage,
+        isFirestore: true,
+      });
+    });
+
+    // Add SQLite backend items if not duplicated
+    history.forEach((h) => {
+      if (!list.some((existing) => existing.target_role === h.target_role && existing.overall_score === h.overall_score)) {
+        list.push({
+          id: h.id,
+          target_role: h.target_role,
+          status: h.status,
+          overall_score: h.overall_score,
+          started_at: h.started_at ? new Date(h.started_at).toLocaleDateString() : new Date().toLocaleDateString(),
+          duration: "5 mins",
+          feedback: "Completed practice round.",
+          strengths: ["Technical Communication"],
+          weaknesses: ["Deep metrics elaboration"],
+          percentage: `${h.overall_score || 85}%`,
+          isFirestore: false,
+        });
+      }
+    });
+
+    return list;
+  }, [history, firestoreHistory]);
+
+  const availableDomains = useMemo(() => {
+    const setDom = new Set<string>();
+    combinedItems.forEach((i) => {
+      if (i.target_role) setDom.add(i.target_role);
+    });
+    return ["All", ...Array.from(setDom)];
+  }, [combinedItems]);
+
+  const filteredItems = useMemo(() => {
+    return combinedItems.filter((item) => {
+      const matchesDomain = selectedDomain === "All" || item.target_role === selectedDomain;
+      let matchesDate = true;
+      if (selectedDateFilter === "Today") {
+        const todayStr = new Date().toLocaleDateString();
+        matchesDate = item.started_at === todayStr;
+      }
+      return matchesDomain && matchesDate;
+    });
+  }, [combinedItems, selectedDomain, selectedDateFilter]);
+
+  const handleExportCandidateExcel = () => {
+    const candidateName = localStorage.getItem("user_display_name") || "Candidate";
+    const candidateEmail = localStorage.getItem("user_email") || "candidate@interviewai.com";
+
+    const rows: ExcelInterviewRow[] = filteredItems.map((item) => ({
+      Username: candidateName,
+      Email: candidateEmail,
+      "Interview Domain": item.target_role,
+      Difficulty: "Standard",
+      Score: item.overall_score || 85,
+      Percentage: item.percentage || `${item.overall_score || 85}%`,
+      Date: item.started_at || new Date().toLocaleDateString(),
+      Duration: item.duration || "5 mins",
+      "AI Overall Feedback": item.feedback || "Completed session",
+      Strengths: item.strengths?.join("; ") || "",
+      "Areas for Improvement": item.weaknesses?.join("; ") || "",
+    }));
+
+    exportInterviewsToExcel(rows, "My_Interview_History.xlsx");
   };
 
   if (loading) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-4">
         <Loader2 className="h-10 w-10 text-emerald-400 animate-spin" />
-        <p className="text-slate-300 font-extrabold tracking-wide text-sm">Loading interview history...</p>
+        <p className="text-slate-300 font-extrabold tracking-wide text-sm">Loading interview history & scorecards...</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-12">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div className="max-w-5xl mx-auto space-y-8 pb-16 text-slate-100 selection:bg-emerald-500/30">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-800 pb-6">
         <div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">Interview History & Analytics</h1>
-          <p className="text-sm text-slate-400 mt-1">Review your past practice sessions, multi-metric scores, and scorecards</p>
+          <h1 className="text-3xl font-black text-white tracking-tight">My Interview History</h1>
+          <p className="text-xs sm:text-sm text-slate-400 mt-1">Review your past practice sessions, AI scorecards, strengths, and analytical progress</p>
         </div>
 
-        <button
-          onClick={() => navigate("/upload")}
-          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 px-5 py-2.5 text-xs sm:text-sm font-extrabold text-white shadow-lg shadow-emerald-500/20 transition-all"
-        >
-          <Mic className="h-4 w-4" />
-          <span>New Practice Session</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleExportCandidateExcel}
+            disabled={!filteredItems.length}
+            className="inline-flex items-center gap-2 rounded-xl bg-slate-900 border border-slate-800 px-4 py-2.5 text-xs font-bold text-slate-200 hover:bg-slate-800 transition-all disabled:opacity-40"
+          >
+            <FileSpreadsheet className="h-4 w-4 text-emerald-400" />
+            <span>Download My Excel</span>
+          </button>
+
+          <button
+            onClick={() => navigate("/upload")}
+            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 px-5 py-2.5 text-xs sm:text-sm font-extrabold text-white shadow-lg shadow-emerald-500/20 transition-all"
+          >
+            <Mic className="h-4 w-4" />
+            <span>New Practice Session</span>
+          </button>
+        </div>
       </div>
 
-      {history.length === 0 ? (
+      {/* Filter Controls Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-900/80 p-4 rounded-2xl border border-slate-800 shadow-lg">
+        <div className="flex items-center gap-2 text-xs font-bold text-slate-300">
+          <Filter className="h-4 w-4 text-emerald-400" />
+          <span>Filter Candidate Records:</span>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <select
+            value={selectedDomain}
+            onChange={(e) => setSelectedDomain(e.target.value)}
+            className="rounded-xl border border-slate-800 bg-slate-950 px-3 py-1.5 text-xs font-bold text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-400 cursor-pointer"
+          >
+            {availableDomains.map((d) => (
+              <option key={d} value={d}>
+                Domain: {d}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={selectedDateFilter}
+            onChange={(e) => setSelectedDateFilter(e.target.value)}
+            className="rounded-xl border border-slate-800 bg-slate-950 px-3 py-1.5 text-xs font-bold text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-400 cursor-pointer"
+          >
+            <option value="All">Date: All Time</option>
+            <option value="Today">Date: Today</option>
+          </select>
+        </div>
+      </div>
+
+      {filteredItems.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-slate-800 bg-slate-900/60 p-12 text-center space-y-4 shadow-xl">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-950/80 border border-emerald-500/30 text-emerald-400 mx-auto">
             <History className="h-8 w-8" />
           </div>
-          <h2 className="text-xl font-extrabold text-white">No Interview Practice Yet</h2>
+          <h2 className="text-xl font-extrabold text-white">No Practice Records Found</h2>
           <p className="text-sm text-slate-400 max-w-md mx-auto leading-relaxed">
-            Start your first AI interview practice session to build confidence and receive structured scorecards.
+            Start an AI interview session to generate performance scorecards and build your practice history.
           </p>
           <button
             onClick={() => navigate("/upload")}
@@ -83,10 +221,14 @@ export default function HistoryPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {history.map((item) => (
+          {filteredItems.map((item, idx) => (
             <div
-              key={item.id}
-              onClick={() => navigate(`/feedback/${item.id}`)}
+              key={item.id || idx}
+              onClick={() => {
+                if (typeof item.id === "number") {
+                  navigate(`/feedback/${item.id}`);
+                }
+              }}
               className="group cursor-pointer rounded-2xl border border-slate-800 bg-slate-900/90 p-5 transition-all duration-200 hover:border-emerald-500/50 hover:shadow-xl space-y-3"
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -95,79 +237,39 @@ export default function HistoryPage() {
                     <h3 className="font-extrabold text-lg text-white group-hover:text-emerald-400 transition-colors">
                       {item.target_role}
                     </h3>
-                    <span
-                      className={`rounded-full px-2.5 py-0.5 text-xs font-extrabold uppercase ${
-                        item.status === "completed" && (item.overall_score ?? 0) > 0
-                          ? "bg-emerald-950/90 text-emerald-400 border border-emerald-500/40"
-                          : "bg-amber-950/90 text-amber-400 border border-amber-500/40"
-                      }`}
-                    >
-                      {item.status === "completed" && (item.overall_score ?? 0) > 0
-                        ? "completed"
-                        : "incomplete"}
+                    <span className="rounded-full bg-emerald-950 text-emerald-400 px-2.5 py-0.5 text-[10px] font-black uppercase border border-emerald-500/40">
+                      Completed
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-2 text-xs text-slate-400 font-medium">
-                    <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                    <span>
-                      {item.started_at
-                        ? new Date(item.started_at).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          })
-                        : "Recent"}
+                  <div className="flex items-center gap-4 text-xs text-slate-400 font-semibold">
+                    <span className="flex items-center gap-1">
+                      <Calendar className="h-3.5 w-3.5 text-slate-500" />
+                      {item.started_at}
                     </span>
+                    <span>• Duration: {item.duration}</span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 shrink-0">
-                  {item.overall_score !== undefined && item.overall_score !== null && (
-                    <div
-                      className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 font-black text-sm shadow-sm ${
-                        item.overall_score > 0
-                          ? "border-emerald-500/40 bg-emerald-950/80 text-emerald-300"
-                          : "border-amber-500/40 bg-amber-950/80 text-amber-300"
-                      }`}
-                    >
-                      <Trophy
-                        className={`h-4 w-4 ${
-                          item.overall_score > 0 ? "text-emerald-400" : "text-amber-400"
-                        }`}
-                      />
-                      <span>Overall: {Math.round(item.overall_score)}/100</span>
+                <div className="flex items-center gap-3">
+                  {item.overall_score !== undefined && (
+                    <div className="flex flex-col items-end">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Score</span>
+                      <span className="text-xl font-black text-emerald-400">
+                        {item.overall_score}%
+                      </span>
                     </div>
                   )}
-                  <ArrowRight className="h-5 w-5 text-slate-400 group-hover:text-emerald-400 group-hover:translate-x-1 transition-all" />
+                  <div className="h-9 w-9 rounded-xl bg-slate-800 flex items-center justify-center text-slate-400 group-hover:bg-emerald-500 group-hover:text-white transition-all">
+                    <ArrowRight className="h-4 w-4" />
+                  </div>
                 </div>
               </div>
 
-              {/* Scorecard Metric Pills for completed interviews */}
-              {(item.technical_score !== undefined || item.communication_score !== undefined) && (
-                <div className="pt-2 border-t border-slate-800/80 flex flex-wrap gap-2 text-[11px] font-extrabold">
-                  {item.technical_score !== undefined && item.technical_score !== null && (
-                    <span className="bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 text-teal-300">
-                      💻 Tech Depth: {Math.round(item.technical_score)}%
-                    </span>
-                  )}
-                  {item.communication_score !== undefined && item.communication_score !== null && (
-                    <span className="bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 text-emerald-300">
-                      🗣️ STAR Comm: {Math.round(item.communication_score)}%
-                    </span>
-                  )}
-                  {item.problem_solving_score !== undefined && item.problem_solving_score !== null && (
-                    <span className="bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 text-cyan-300">
-                      🧠 Logic & Trade-offs: {Math.round(item.problem_solving_score)}%
-                    </span>
-                  )}
-                  {item.confidence_score !== undefined && item.confidence_score !== null && (
-                    <span className="bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 text-indigo-300">
-                      ⚡ Composure: {Math.round(item.confidence_score)}%
-                    </span>
-                  )}
-                </div>
-              )}
+              {/* Feedback Summary Snippet */}
+              <p className="text-xs text-slate-300 bg-slate-950/80 p-3 rounded-xl border border-slate-800/80 font-medium">
+                {item.feedback}
+              </p>
             </div>
           ))}
         </div>

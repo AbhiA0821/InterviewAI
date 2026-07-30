@@ -94,13 +94,16 @@ export default function LiveInterviewPage() {
       if (!document.fullscreenElement) {
         enterFullscreen();
       }
+      if (micActive && !isRecording) {
+        startAutoVoiceListening();
+      }
     };
 
     window.addEventListener("click", handleFirstInteraction, { once: true });
     return () => {
       window.removeEventListener("click", handleFirstInteraction);
     };
-  }, []);
+  }, [micActive, isRecording]);
 
   // Connect WebSocket to backend Gemini Live endpoint
   useEffect(() => {
@@ -154,6 +157,11 @@ export default function LiveInterviewPage() {
           setTimeout(() => {
             navigate(`/feedback/${id}`);
           }, 3000);
+        } else if (data.type === "error") {
+          console.error("[WS] Server error message:", data.message);
+          setError(data.message || "An error occurred during interview streaming.");
+          setSubmitting(false);
+          setAvatarStatus("listening");
         }
       } catch (e) {
         console.warn("[WS] Failed to parse message:", e);
@@ -202,14 +210,14 @@ export default function LiveInterviewPage() {
     transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [interview?.transcript, voiceTranscript]);
 
-  // Candidate Camera Setup for Floating Picture-in-Picture
+  // Candidate Camera & Microphone Setup for Floating Picture-in-Picture & STT
   useEffect(() => {
-    async function startCamera() {
+    async function startCameraAndMic() {
       try {
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
           const stream = await navigator.mediaDevices.getUserMedia({
             video: { width: 640, height: 480, facingMode: "user" },
-            audio: false,
+            audio: true, // Enable Microphone Stream Access
           });
           userMediaStreamRef.current = stream;
           if (userVideoRef.current) {
@@ -217,11 +225,18 @@ export default function LiveInterviewPage() {
           }
         }
       } catch (e) {
-        console.warn("Live candidate camera stream unavailable:", e);
-        setCameraActive(false);
+        console.warn("Live candidate camera/mic stream fallback attempt:", e);
+        try {
+          // Video only fallback if mic hardware permission prompt was separate
+          const vidStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+          userMediaStreamRef.current = vidStream;
+          if (userVideoRef.current) userVideoRef.current.srcObject = vidStream;
+        } catch (vidErr) {
+          setCameraActive(false);
+        }
       }
     }
-    startCamera();
+    startCameraAndMic();
     return () => {
       if (userMediaStreamRef.current) {
         userMediaStreamRef.current.getTracks().forEach((t) => t.stop());
@@ -229,12 +244,24 @@ export default function LiveInterviewPage() {
     };
   }, []);
 
-  // Continuous Speech Recognition (Indian English)
-  const startAutoVoiceListening = () => {
+  // Continuous Speech Recognition (Indian English + General Fallback)
+  const startAutoVoiceListening = async () => {
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
-    if (!SpeechRecognition) return;
+    if (!SpeechRecognition) {
+      console.warn("SpeechRecognition API unavailable in browser.");
+      return;
+    }
+
+    // Ensure Microphone Permission is explicitly requested & granted
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+      }
+    } catch (e) {
+      console.warn("Mic permission prompt notice:", e);
+    }
 
     shouldKeepListeningRef.current = true;
 
@@ -248,16 +275,31 @@ export default function LiveInterviewPage() {
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
-      recognition.lang = "en-IN"; // Strict Indian English Speech Recognition
+      try {
+        recognition.lang = "en-IN"; // Primary Indian English Speech Recognition
+      } catch (e) {
+        recognition.lang = "en-US";
+      }
 
       recognition.onresult = (event: any) => {
-        let transcript = "";
+        let fullTranscript = "";
         for (let i = 0; i < event.results.length; i++) {
-          transcript += event.results[i][0].transcript;
+          fullTranscript += event.results[i][0].transcript;
         }
-        const cleaned = correctSpeechPhonetics(transcript.trim());
+        const cleaned = correctSpeechPhonetics(fullTranscript.trim());
         if (cleaned) {
           setVoiceTranscript(cleaned);
+        }
+      };
+
+      recognition.onerror = (event: any) => {
+        console.warn("[SpeechRecognition] Error event:", event.error);
+        if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+          setError("Microphone access permission was blocked. Please click the mic icon in your browser address bar to allow microphone access.");
+          setIsRecording(false);
+          shouldKeepListeningRef.current = false;
+        } else if (event.error === "no-speech") {
+          // Silent interval, keep listening active
         }
       };
 
@@ -398,9 +440,11 @@ export default function LiveInterviewPage() {
   };
 
   const handleSendVoiceAnswer = async () => {
-    if (!voiceTranscript.trim() || submitting || !interview) return;
+    if (submitting || !interview) return;
     const targetInterviewId = interview.interview_id || (interview as any).id || Number(id);
     if (!targetInterviewId) return;
+
+    const currentAns = voiceTranscript.trim() || "Candidate provided response.";
 
     shouldKeepListeningRef.current = false;
     if (recognitionRef.current) {
@@ -412,7 +456,6 @@ export default function LiveInterviewPage() {
     setSubmitting(true);
     setAvatarStatus("thinking");
     setError("");
-    const currentAns = voiceTranscript;
     setVoiceTranscript("");
 
     // Update transcript locally for instantaneous visual feedback
@@ -847,7 +890,7 @@ export default function LiveInterviewPage() {
             <button
               type="button"
               onClick={handleSendVoiceAnswer}
-              disabled={!voiceTranscript.trim() || submitting}
+              disabled={submitting}
               className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-extrabold disabled:opacity-40 shadow-md transition-all active:scale-95 flex items-center justify-center"
               title="Submit Answer Immediately"
             >
@@ -927,7 +970,7 @@ export default function LiveInterviewPage() {
           <button
             type="button"
             onClick={handleSendVoiceAnswer}
-            disabled={!voiceTranscript.trim() || submitting}
+            disabled={submitting}
             className="px-5 py-3 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-extrabold text-xs shadow-lg transition-all disabled:opacity-40 flex items-center gap-2"
           >
             {submitting ? (

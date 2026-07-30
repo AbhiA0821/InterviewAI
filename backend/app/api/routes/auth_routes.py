@@ -140,3 +140,50 @@ def get_current_user_profile(
             pass
 
     return {"authenticated": False}
+
+
+class UpdateProfileRequest(BaseModel):
+    display_name: str
+
+
+@router.put("/profile")
+def update_user_profile(
+    request: UpdateProfileRequest,
+    authorization: Optional[str] = Header(None),
+    db: Session = Depends(get_db),
+):
+    """Update current logged in user's username/display_name in SQLite database."""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid authorization header.")
+
+    token = authorization.split(" ")[1]
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("user_id")
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid session token.")
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    clean_name = request.display_name.strip()
+    if not clean_name:
+        raise HTTPException(status_code=400, detail="Username cannot be empty.")
+
+    user.display_name = clean_name
+    db.commit()
+    db.refresh(user)
+
+    access_token = create_access_token(
+        data={"user_id": user.id, "email": user.email, "display_name": user.display_name}
+    )
+
+    return {
+        "user_id": user.id,
+        "email": user.email,
+        "display_name": user.display_name,
+        "photo_url": user.photo_url,
+        "token": access_token,
+    }
+

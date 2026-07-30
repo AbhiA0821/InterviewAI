@@ -334,17 +334,32 @@ export default function ResumeUploadPage() {
               {!parsedResume ? (
                 <div className="relative border border-dashed border-slate-300 rounded-lg p-3 text-center bg-white">
                   <input type="file" accept=".pdf" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer" />
-                  <span className="text-xs text-slate-500 font-medium">
-                    {file ? file.name : "Click or drag PDF resume here"}
+                  <span className="text-xs text-slate-500 font-medium flex items-center justify-center gap-2">
+                    {uploading ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-500" />
+                        <span className="text-emerald-600 font-bold">Extracting skills from {file?.name}...</span>
+                      </>
+                    ) : file ? (
+                      <span className="text-amber-600 font-bold">Extracting skills from {file.name}... Please wait</span>
+                    ) : (
+                      "Click or drag PDF resume here"
+                    )}
                   </span>
                 </div>
               ) : (
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {extractedSkills.map((sk, i) => (
-                    <span key={i} className="rounded-full bg-emerald-100 text-emerald-800 px-2.5 py-0.5 text-[11px] font-bold">
-                      ✨ {sk}
-                    </span>
-                  ))}
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-xs text-emerald-700 font-bold">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    <span>Skills Extracted from {file?.name || "Resume"}:</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {extractedSkills.map((sk, i) => (
+                      <span key={i} className="rounded-full bg-emerald-100 text-emerald-800 px-2.5 py-0.5 text-[11px] font-bold">
+                        ✨ {sk}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -362,10 +377,6 @@ export default function ResumeUploadPage() {
                   I agree with the <span className="font-bold text-emerald-600 underline">Terms and Conditions</span>
                 </span>
               </label>
-
-              <span className="rounded-full bg-red-50 text-red-500 px-3 py-1 text-[11px] font-bold border border-red-200">
-                Unlimited Practice Mode
-              </span>
             </div>
 
             {/* Bottom Modal Action Buttons */}
@@ -381,9 +392,22 @@ export default function ResumeUploadPage() {
               <button
                 type="button"
                 onClick={handleProceedToPrecheck}
-                className="px-8 py-2.5 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold transition-colors shadow-md"
+                disabled={uploading || (file !== null && !parsedResume) || !agreed || !targetRole.trim()}
+                className="px-8 py-2.5 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                title={
+                  uploading || (file !== null && !parsedResume)
+                    ? "Please wait until resume skills are extracted..."
+                    : "Proceed to Interview Setup"
+                }
               >
-                Start Interview
+                {uploading || (file !== null && !parsedResume) ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Extracting Resume Skills...</span>
+                  </>
+                ) : (
+                  <span>Start Interview</span>
+                )}
               </button>
             </div>
           </div>
@@ -507,9 +531,16 @@ export default function ResumeUploadPage() {
               type="button"
               onClick={handleLaunchInterview}
               disabled={starting}
-              className="px-8 py-2.5 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold shadow-lg transition-all disabled:opacity-50"
+              className="px-8 py-2.5 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold shadow-lg transition-all disabled:opacity-50 flex items-center gap-2"
             >
-              {starting ? "Launching..." : "Start Interview"}
+              {starting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Launching AI Stage...</span>
+                </>
+              ) : (
+                <span>Start Interview</span>
+              )}
             </button>
           </div>
         </div>

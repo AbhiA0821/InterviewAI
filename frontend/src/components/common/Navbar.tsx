@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { authService, UserProfile } from "../../services/authService";
-import { Bot, FileText, History, LogIn, LogOut, Mic, Sparkles, UserCheck } from "lucide-react";
+import { Bot, Edit3, History, LogIn, LogOut, ShieldCheck, Sparkles, UserCheck } from "lucide-react";
 
 export const Navbar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [isEditingUsername, setIsEditingUsername] = useState(false);
+  const [newUsername, setNewUsername] = useState("");
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -24,6 +26,18 @@ export const Navbar: React.FC = () => {
       }
     } catch (e) {
       setCurrentUser(null);
+    }
+  };
+
+  const handleUpdateUsername = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newUsername.trim()) return;
+    try {
+      const updated = await authService.updateProfile(newUsername.trim());
+      setCurrentUser((prev) => prev ? { ...prev, display_name: updated.display_name } : updated);
+      setIsEditingUsername(false);
+    } catch (err) {
+      console.warn("Failed to update username:", err);
     }
   };
 
@@ -96,18 +110,6 @@ export const Navbar: React.FC = () => {
           </Link>
 
           <Link
-            to="/upload"
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-              isActive("/upload")
-                ? "bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 shadow-sm"
-                : "text-slate-300 hover:bg-slate-900 hover:text-white"
-            }`}
-          >
-            <FileText className="h-4 w-4" />
-            <span>Resume Setup</span>
-          </Link>
-
-          <Link
             to="/history"
             className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
               isActive("/history")
@@ -117,6 +119,18 @@ export const Navbar: React.FC = () => {
           >
             <History className="h-4 w-4" />
             <span>History</span>
+          </Link>
+
+          <Link
+            to="/admin"
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+              isActive("/admin")
+                ? "bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 shadow-sm"
+                : "text-slate-300 hover:bg-slate-900 hover:text-white"
+            }`}
+          >
+            <ShieldCheck className="h-4 w-4 text-emerald-400" />
+            <span>Admin</span>
           </Link>
 
           {/* Authenticated User Badge */}
@@ -136,6 +150,18 @@ export const Navbar: React.FC = () => {
                     {currentUser.email}
                   </span>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewUsername(currentUser.display_name || "");
+                    setIsEditingUsername(true);
+                  }}
+                  className="p-1 rounded-md text-slate-400 hover:text-emerald-400 hover:bg-slate-850 transition-all ml-1"
+                  title="Edit Profile Username (Saved in Database)"
+                >
+                  <Edit3 className="h-3.5 w-3.5" />
+                </button>
               </div>
 
               <button
@@ -155,16 +181,56 @@ export const Navbar: React.FC = () => {
               <span>Sign in</span>
             </Link>
           )}
-
-          <Link
-            to="/upload"
-            className="ml-2 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 px-4 py-2 text-xs sm:text-sm font-black text-white shadow-lg shadow-emerald-500/25 transition-all hover:scale-105 active:scale-95"
-          >
-            <Mic className="h-4 w-4" />
-            <span>Start Practice</span>
-          </Link>
         </nav>
       </div>
+
+      {/* Edit Username Modal */}
+      {isEditingUsername && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <form onSubmit={handleUpdateUsername} className="w-full max-w-sm rounded-3xl border border-slate-800 bg-slate-950 p-6 text-white shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
+                <Edit3 className="h-4 w-4 text-emerald-400" />
+                <span>Update Username</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsEditingUsername(false)}
+                className="text-slate-400 hover:text-white text-xs font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-300">Profile Username (Saved to Database)</label>
+              <input
+                type="text"
+                value={newUsername}
+                onChange={(e) => setNewUsername(e.target.value)}
+                placeholder="Enter username"
+                className="w-full rounded-xl border border-slate-800 bg-slate-900 p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-400 font-bold"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsEditingUsername(false)}
+                className="px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-800 text-slate-300 hover:bg-slate-900"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 rounded-xl text-xs font-extrabold bg-emerald-500 hover:bg-emerald-400 text-white shadow-md"
+              >
+                Save to Profile
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </header>
   );
 };

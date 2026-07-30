@@ -134,12 +134,9 @@ export default function LandingPage() {
               <div className="relative rounded-3xl border border-emerald-500/30 bg-slate-900/90 p-4 shadow-2xl backdrop-blur">
                 <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 group">
                   <img
-                    src="/avatars/riya_avatar.png"
-                    alt="Riya AI Interviewer"
-                    className="w-full h-full object-cover object-[center_16%] transition-transform duration-500 group-hover:scale-105"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600&auto=format&fit=crop&q=80";
-                    }}
+                    src="/avatars/robot_avatar.png"
+                    alt="AI Robot Interviewer"
+                    className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
                   />
 
                   {/* Glass Header Tag */}

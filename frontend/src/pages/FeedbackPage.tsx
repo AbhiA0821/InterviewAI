@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { feedbackService, FeedbackReport } from "../services/feedbackService";
+import { saveInterviewResultToFirestore } from "../services/firestoreService";
 import { AlertCircle, ArrowLeft, Award, CheckCircle2, ChevronDown, ChevronUp, Cpu, Lightbulb, Loader2, MessageSquare, Printer, RotateCcw, Sparkles, Trophy } from "lucide-react";
 
 export default function FeedbackPage() {
@@ -23,6 +24,34 @@ export default function FeedbackPage() {
       setLoading(true);
       const data = await feedbackService.getFeedback(Number(id));
       setReport(data);
+
+      // Auto-store interview result document in Firestore 'interview_results' collection
+      try {
+        const storedUserJson = localStorage.getItem("user");
+        const currentCandidateUser = storedUserJson ? JSON.parse(storedUserJson) : null;
+        const candidateName = localStorage.getItem("user_display_name") || currentCandidateUser?.display_name || "Candidate";
+        const candidateEmail = currentCandidateUser?.email || "candidate@interviewai.com";
+        const candidateUid = currentCandidateUser?.uid || localStorage.getItem("user_uid") || `user_${Date.now()}`;
+
+        await saveInterviewResultToFirestore({
+          uid: candidateUid,
+          username: candidateName,
+          email: candidateEmail,
+          interviewDomain: data.target_role || "Software Engineer",
+          difficulty: "Standard",
+          totalQuestions: data.transcript ? Math.max(1, Math.floor(data.transcript.length / 2)) : 5,
+          correctAnswers: Math.round(((data.overall_score || 85) / 100) * 5),
+          score: data.overall_score || 85,
+          percentage: `${data.overall_score || 85}%`,
+          overallFeedback: data.detailed_report?.summary || "Completed mock interview session.",
+          strengths: data.strengths || [],
+          weaknesses: data.areas_for_improvement || [],
+          interviewDate: new Date().toLocaleDateString(),
+          interviewDuration: localStorage.getItem("selected_duration") || "5 mins",
+        });
+      } catch (fsErr) {
+        console.warn("[Firestore] Auto-save scorecard notice:", fsErr);
+      }
     } catch (err: any) {
       setError("Failed to load feedback report.");
     } finally {
