@@ -76,7 +76,6 @@ const defaultApp = getApps().length ? getApp() : initializeApp(initialConfig);
 export const auth = getAuth(defaultApp);
 export const firestoreDb = getFirestore(defaultApp);
 export const googleProvider = new GoogleAuthProvider();
-googleProvider.setCustomParameters({ prompt: "select_account" });
 
 export const signInWithGooglePopup = async () => {
   try {

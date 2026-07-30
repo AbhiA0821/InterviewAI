@@ -15,6 +15,21 @@ export default function LoginPage() {
   const [pendingUser, setPendingUser] = useState<any>(null);
 
   useEffect(() => {
+    // Persistent Auto-Login: If candidate already signed in on this device, auto-redirect to Home
+    const token = localStorage.getItem("interviewai_token");
+    if (token) {
+      authService
+        .getCurrentUser()
+        .then((usr) => {
+          if (usr && usr.authenticated) {
+            navigate("/", { replace: true });
+          }
+        })
+        .catch(() => {
+          localStorage.removeItem("interviewai_token");
+        });
+    }
+
     const handleRedirectResult = async () => {
       try {
         const payload = await checkGoogleRedirectResult();
