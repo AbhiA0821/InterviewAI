@@ -16,6 +16,8 @@ let authInstance: any = null;
 export const getFirebaseAuth = async () => {
   if (authInstance) return authInstance;
 
+  console.log("🔥 [Firebase Client Env] import.meta.env.VITE_FIREBASE_API_KEY:", import.meta.env.VITE_FIREBASE_API_KEY);
+
   let apiKey = import.meta.env.VITE_FIREBASE_API_KEY;
   let authDomain = import.meta.env.VITE_FIREBASE_AUTH_DOMAIN;
   let projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID;
@@ -29,6 +31,7 @@ export const getFirebaseAuth = async () => {
       const res = await fetch("/api/auth/firebase-config");
       if (res.ok) {
         const runtimeConfig = await res.json();
+        console.log("🔥 [Firebase Backend Runtime Config]:", runtimeConfig);
         if (runtimeConfig.apiKey && runtimeConfig.apiKey.length > 5) {
           apiKey = runtimeConfig.apiKey;
           authDomain = runtimeConfig.authDomain;
@@ -51,6 +54,8 @@ export const getFirebaseAuth = async () => {
     messagingSenderId: (messagingSenderId || "980340256724").trim(),
     appId: (appId || "1:980340256724:web:a822b8c684a94f4b02b041").trim(),
   };
+
+  console.log("🔥 [Firebase Active Config Key]:", finalConfig.apiKey);
 
   firebaseApp = initializeApp(finalConfig, "interviewai-runtime-app-" + Date.now());
   authInstance = getAuth(firebaseApp);
