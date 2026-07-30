@@ -1,50 +1,30 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { authService, UserProfile } from "../../services/authService";
+import { useAuth } from "../../context/AuthContext";
 import { Bot, Edit3, History, LogIn, LogOut, ShieldCheck, UserCheck } from "lucide-react";
 
 export const Navbar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const { currentUser, logout, updateDisplayName } = useAuth();
   const [isEditingUsername, setIsEditingUsername] = useState(false);
   const [newUsername, setNewUsername] = useState("");
 
   const isActive = (path: string) => location.pathname === path;
 
-  useEffect(() => {
-    fetchUser();
-  }, [location.pathname]);
-
-  const fetchUser = async () => {
-    try {
-      const data = await authService.getCurrentUser();
-      if (data.authenticated) {
-        setCurrentUser(data);
-      } else {
-        setCurrentUser(null);
-      }
-    } catch (e) {
-      setCurrentUser(null);
-    }
-  };
-
   const handleUpdateUsername = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newUsername.trim()) return;
     try {
-      const updated = await authService.updateProfile(newUsername.trim());
-      setCurrentUser((prev) => prev ? { ...prev, display_name: updated.display_name } : updated);
+      await updateDisplayName(newUsername.trim());
       setIsEditingUsername(false);
     } catch (err) {
       console.warn("Failed to update username:", err);
     }
   };
 
-  const handleSignOut = () => {
-    authService.logout();
-    sessionStorage.removeItem("google_authenticated");
-    setCurrentUser(null);
+  const handleSignOut = async () => {
+    await logout();
     navigate("/login");
   };
 

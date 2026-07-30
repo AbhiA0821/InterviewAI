@@ -1,12 +1,12 @@
-// Verified Clean Google-Only Sign-In Page (No Mobile OTP / No Demo Bypass) - Timestamp 1785414510
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { authService } from "../services/authService";
-import { Sparkles, ShieldCheck, ArrowRight, Bot, Lock } from "lucide-react";
-import { signInWithGooglePopup, checkGoogleRedirectResult } from "../services/firebase";
+import { useAuth } from "../context/AuthContext";
+import { ShieldCheck, ArrowRight, Bot, Lock, Sparkles } from "lucide-react";
+import { checkGoogleRedirectResult } from "../services/firebase";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { isAuthenticated, loginWithGoogle, updateDisplayName } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -15,19 +15,10 @@ export default function LoginPage() {
   const [pendingUser, setPendingUser] = useState<any>(null);
 
   useEffect(() => {
-    // Persistent Auto-Login: If candidate already signed in on this device, auto-redirect to Home
-    const token = localStorage.getItem("interviewai_token");
-    if (token) {
-      authService
-        .getCurrentUser()
-        .then((usr) => {
-          if (usr && usr.authenticated) {
-            navigate("/", { replace: true });
-          }
-        })
-        .catch(() => {
-          localStorage.removeItem("interviewai_token");
-        });
+    // If candidate already authenticated on this device, auto-redirect to Home instantly
+    if (isAuthenticated) {
+      navigate("/", { replace: true });
+      return;
     }
 
     const handleRedirectResult = async () => {
@@ -35,10 +26,8 @@ export default function LoginPage() {
         const payload = await checkGoogleRedirectResult();
         if (payload) {
           setLoading(true);
-          const userObj = await authService.loginWithGoogle(payload);
-          sessionStorage.setItem("google_authenticated", "true");
-          setPendingUser(userObj);
-          setUsernameInput(userObj.display_name || "Candidate");
+          setPendingUser(payload);
+          setUsernameInput(payload.display_name || "Candidate");
           setShowUsernameModal(true);
         }
       } catch (err) {
@@ -48,7 +37,7 @@ export default function LoginPage() {
       }
     };
     handleRedirectResult();
-  }, [navigate]);
+  }, [isAuthenticated, navigate]);
 
   const handleCompleteLogin = async () => {
     const cleanName = usernameInput.trim();
@@ -58,10 +47,9 @@ export default function LoginPage() {
     }
     setLoading(true);
     try {
-      await authService.updateProfile(cleanName);
-      sessionStorage.setItem("google_authenticated", "true");
+      await updateDisplayName(cleanName);
       setShowUsernameModal(false);
-      navigate("/");
+      navigate("/", { replace: true });
     } catch (err: any) {
       setError(err.message || "Failed to update profile username.");
     } finally {
@@ -74,14 +62,8 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const authPayload = await signInWithGooglePopup();
-      if (authPayload) {
-        const userObj = await authService.loginWithGoogle(authPayload);
-        sessionStorage.setItem("google_authenticated", "true");
-        setPendingUser(userObj);
-        setUsernameInput(userObj.display_name || "Candidate");
-        setShowUsernameModal(true);
-      }
+      await loginWithGoogle();
+      navigate("/", { replace: true });
     } catch (err: any) {
       console.warn("Google authentication error:", err);
       const errMsg = err?.message || err?.code || String(err);

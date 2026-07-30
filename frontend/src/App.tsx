@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 import { Navbar } from "./components/common/Navbar";
 import LandingPage from "./pages/LandingPage";
 import DashboardPage from "./pages/DashboardPage";
@@ -8,44 +8,19 @@ import LiveInterviewPage from "./pages/LiveInterviewPage";
 import FeedbackPage from "./pages/FeedbackPage";
 import HistoryPage from "./pages/HistoryPage";
 import LoginPage from "./pages/LoginPage";
-import { authService } from "./services/authService";
-import { Loader2 } from "lucide-react";
-
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
 import MirrorRoomPage from "./pages/MirrorRoomPage";
 
-// RequireAuth component: Enforces Google Authentication Page FIRST on app start
+// RequireAuth component: Enforces Google Authentication & persistent session guard
 function RequireAuth({ children }: { children: JSX.Element }) {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const { isAuthenticated, loading } = useAuth();
 
-  useEffect(() => {
-    const token = localStorage.getItem("interviewai_token");
-
-    if (!token) {
-      setIsAuthenticated(false);
-      return;
-    }
-
-    authService
-      .getCurrentUser()
-      .then((user) => {
-        if (user && user.authenticated) {
-          sessionStorage.setItem("google_authenticated", "true");
-          setIsAuthenticated(true);
-        } else {
-          setIsAuthenticated(false);
-        }
-      })
-      .catch(() => {
-        setIsAuthenticated(false);
-      });
-  }, []);
-
-  if (isAuthenticated === null) {
+  if (loading) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-3">
-        <Loader2 className="h-10 w-10 text-indigo-500 animate-spin" />
-        <p className="text-sm font-medium text-muted-foreground">Checking Google Authentication Guard...</p>
+        <Loader2 className="h-10 w-10 text-emerald-400 animate-spin" />
+        <p className="text-sm font-bold text-slate-300">Checking your account...</p>
       </div>
     );
   }
@@ -162,7 +137,9 @@ function AppContent() {
 function App() {
   return (
     <BrowserRouter>
-      <AppContent />
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </BrowserRouter>
   );
 }
