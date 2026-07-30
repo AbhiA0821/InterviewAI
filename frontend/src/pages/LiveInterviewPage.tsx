@@ -68,6 +68,21 @@ export default function LiveInterviewPage() {
   const [timerSeconds, setTimerSeconds] = useState<number>(getSecondsFromDuration(durationParam));
   const [error, setError] = useState("");
 
+  const thinkingMessages = [
+    "Analyzing your response...",
+    "Evaluating technical depth...",
+    "Preparing the next question...",
+  ];
+  const [thinkingMsgIndex, setThinkingMsgIndex] = useState(0);
+
+  useEffect(() => {
+    if (!submitting) return;
+    const interval = setInterval(() => {
+      setThinkingMsgIndex((prev) => (prev + 1) % thinkingMessages.length);
+    }, 700);
+    return () => clearInterval(interval);
+  }, [submitting]);
+
   // Controls for Floating UI & Layout Mode
   const [viewMode, setViewMode] = useState<"split" | "pip">("split");
   const [cameraActive, setCameraActive] = useState(true);
@@ -711,11 +726,18 @@ export default function LiveInterviewPage() {
             </button>
           </div>
 
-          {/* Full Active Question Text with Custom Scrollbar */}
+          {/* Full Active Question Text with Dynamic Sub-5s Thinking Indicator */}
           <div className="max-h-24 sm:max-h-28 overflow-y-auto pr-2 custom-scrollbar">
-            <p className="text-slate-100 text-xs sm:text-sm md:text-base font-semibold leading-relaxed select-text">
-              {activeQuestionText}
-            </p>
+            {submitting ? (
+              <div className="flex items-center gap-2.5 text-emerald-400 font-extrabold text-sm py-1 animate-pulse">
+                <Loader2 className="h-4 w-4 animate-spin text-emerald-400 shrink-0" />
+                <span>{thinkingMessages[thinkingMsgIndex]}</span>
+              </div>
+            ) : (
+              <p className="text-slate-100 text-xs sm:text-sm md:text-base font-semibold leading-relaxed select-text">
+                {activeQuestionText}
+              </p>
+            )}
           </div>
         </div>
 
