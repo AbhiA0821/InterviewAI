@@ -59,6 +59,26 @@ export default function LoginPage() {
     }
   };
 
+  const handleDemoLogin = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const response = await fetch("/api/auth/demo-login", { method: "POST" });
+      const data = await response.json();
+      if (data.token) {
+        localStorage.setItem("interviewai_token", data.token);
+        sessionStorage.setItem("google_authenticated", "true");
+        navigate("/");
+      } else {
+        setError("Demo login failed.");
+      }
+    } catch (err: any) {
+      setError("Demo login error: " + (err.message || String(err)));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSendPhoneOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanPhone = phone.trim();
@@ -213,6 +233,22 @@ export default function LoginPage() {
                 <p className="text-center text-[11px] text-slate-500 font-medium pt-1">
                   1-Click Instant Sign in via Google OAuth 2.0
                 </p>
+
+                <div className="relative flex py-1 items-center">
+                  <div className="flex-grow border-t border-slate-800"></div>
+                  <span className="flex-shrink mx-2 text-[10px] uppercase tracking-wider text-slate-500 font-bold">or quick access</span>
+                  <div className="flex-grow border-t border-slate-800"></div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleDemoLogin}
+                  disabled={loading}
+                  className="w-full flex items-center justify-center gap-2 rounded-2xl border border-emerald-500/30 bg-emerald-950/40 hover:bg-emerald-900/50 py-3 px-4 text-xs font-extrabold text-emerald-300 transition-all hover:scale-[1.01] active:scale-98 shadow-md"
+                >
+                  <Sparkles className="h-4 w-4 text-emerald-400 animate-pulse" />
+                  <span>Instant Demo Sign In (Bypass Firebase)</span>
+                </button>
               </div>
             )}
 
