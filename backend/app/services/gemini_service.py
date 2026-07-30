@@ -307,25 +307,52 @@ Respond ONLY with the follow-up question text.
             }
 
         prompt = f"""
-You are a Principal Technical Interviewer evaluating a candidate's actual interview answers for '{target_role}'.
+You are a Principal Technical & HR Interviewer evaluating a candidate's actual interview answers for '{target_role}'.
 Analyze the following interview transcript in detail:
 {json.dumps(transcript, indent=2)}
 
 CRITICAL: If the candidate provided no answers, very brief answers (under 5 words total), or left the session early, assign overall_score = 0.0 and recommendation = "Incomplete / Abandoned".
 
-Evaluate the candidate across 4 core dimensions (0-100 scale):
+Evaluate the candidate across 14 core dimensions (0-100 scale):
 1. "technical_score": Technical knowledge, accuracy, and engineering depth.
 2. "communication_score": Clarity, articulation, and structure of responses.
-3. "problem_solving_score": Analytical thinking, non-technical reasoning, trade-offs, and logic.
-4. "confidence_score": Composure, assertion, and conviction in answers.
+3. "project_understanding_score": Deep understanding of architecture, design, and project trade-offs.
+4. "resume_knowledge_score": Authenticity, confidence, and detail regarding resume claims.
+5. "problem_solving_score": Analytical thinking, trade-offs, and logic.
+6. "confidence_score": Composure, assertion, and conviction in answers.
+7. "analytical_thinking_score": Data-driven reasoning and structured analysis.
+8. "leadership_score": Initiative, ownership, and influence.
+9. "teamwork_score": Collaboration, empathy, and conflict resolution.
+10. "behavioural_score": STAR framework adherence and situational judgment.
+11. "time_management_score": Conciseness and efficiency of explanation.
+12. "professionalism_score": Tone, etiquette, and executive presence.
+13. "vocabulary_score": Domain-specific terminology and technical language.
+14. "clarity_score": Directness, focus, and precision.
 
 Return ONLY a JSON object formatted as:
 {{
   "overall_score": float (0-100),
   "communication_score": float (0-100),
   "technical_score": float (0-100),
+  "project_understanding_score": float (0-100),
+  "resume_knowledge_score": float (0-100),
   "problem_solving_score": float (0-100),
   "confidence_score": float (0-100),
+  "analytical_thinking_score": float (0-100),
+  "leadership_score": float (0-100),
+  "teamwork_score": float (0-100),
+  "behavioural_score": float (0-100),
+  "time_management_score": float (0-100),
+  "professionalism_score": float (0-100),
+  "vocabulary_score": float (0-100),
+  "clarity_score": float (0-100),
+  "readiness": {{
+    "resume_strength": float (0-100),
+    "technical_readiness": float (0-100),
+    "hr_readiness": float (0-100),
+    "communication_readiness": float (0-100),
+    "overall_readiness": float (0-100)
+  }},
   "strengths": [
     "Specific candidate strength 1 based on their answers",
     "Specific candidate strength 2",
@@ -335,6 +362,16 @@ Return ONLY a JSON object formatted as:
     "Specific area to improve 1 based on their answers",
     "Specific area to improve 2",
     "Specific area to improve 3"
+  ],
+  "resume_suggestions": [
+    "Actionable suggestion 1 to improve resume impact for target role",
+    "Actionable suggestion 2 to add metrics and project deliverables",
+    "Actionable suggestion 3"
+  ],
+  "learning_roadmap": [
+    "Topic 1 to revise before your real interview",
+    "Technology/framework to practice",
+    "Soft skill or communication improvement tip"
   ],
   "detailed_report": {{
     "summary": "Detailed overall candidate performance summary",
