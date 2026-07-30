@@ -1,3 +1,4 @@
+// Verified Clean Google-Only Sign-In Page (No Mobile OTP / No Demo Bypass) - Timestamp 1785414510
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { authService } from "../services/authService";
