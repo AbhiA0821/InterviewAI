@@ -691,6 +691,34 @@ export default function LiveInterviewPage() {
         </div>
       </div>
 
+      {/* PROGRESS STAGE TIMELINE BAR */}
+      <div className="flex items-center justify-between px-3 py-1.5 bg-slate-950/90 border border-slate-800/80 rounded-xl overflow-x-auto custom-scrollbar z-20 shrink-0 gap-2 text-[11px] font-extrabold">
+        {[
+          { step: 1, label: "Introduction", status: (interview?.current_question_index || 0) > 0 ? "done" : "active" },
+          { step: 2, label: "Resume Discussion", status: (interview?.current_question_index || 0) >= 1 ? ((interview?.current_question_index || 0) > 2 ? "done" : "active") : "pending" },
+          { step: 3, label: "Technical Deep-Dive", status: (interview?.current_question_index || 0) >= 3 ? ((interview?.current_question_index || 0) > 6 ? "done" : "active") : "pending" },
+          { step: 4, label: "Scenario & Systems", status: (interview?.current_question_index || 0) >= 7 ? ((interview?.current_question_index || 0) > 9 ? "done" : "active") : "pending" },
+          { step: 5, label: "Behavioral Round", status: (interview?.current_question_index || 0) >= 10 ? "active" : "pending" },
+          { step: 6, label: "Final Evaluation", status: "pending" },
+        ].map((item) => (
+          <div
+            key={item.step}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border shrink-0 transition-all ${
+              item.status === "done"
+                ? "bg-emerald-950/90 border-emerald-500/50 text-emerald-400"
+                : item.status === "active"
+                ? "bg-teal-950/90 border-teal-400 text-teal-300 shadow-[0_0_12px_rgba(20,184,166,0.3)] animate-pulse"
+                : "bg-slate-900/60 border-slate-800 text-slate-500"
+            }`}
+          >
+            <span className="h-4 w-4 rounded-full flex items-center justify-center text-[10px] font-black border border-current">
+              {item.status === "done" ? "✓" : item.step}
+            </span>
+            <span>{item.label}</span>
+          </div>
+        ))}
+      </div>
+
       {/* Error Banner */}
       {error && (
         <div className="rounded-xl border border-red-500/50 bg-red-950/80 p-2 text-xs text-red-300 font-bold text-center z-30 shrink-0">
@@ -884,13 +912,24 @@ export default function LiveInterviewPage() {
             <span className="flex items-center gap-1.5 text-emerald-400">
               <Sparkles className="h-3.5 w-3.5" /> Live Voice / Text Answer
             </span>
-            <span className={`px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold border ${
-              isRecording
-                ? "bg-emerald-950/80 border-emerald-500/50 text-emerald-400 animate-pulse"
-                : "bg-slate-800 border-slate-700 text-slate-400"
-            }`}>
-              {isRecording ? "🎤 Voice Recording Active..." : "Ready to speak / type"}
-            </span>
+            <div className="flex items-center gap-2">
+              {isRecording && (
+                <div className="flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-500/50">
+                  <span className="h-3 w-1 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="h-4 w-1 bg-teal-300 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="h-2 w-1 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                  <span className="h-5 w-1 bg-cyan-300 rounded-full animate-bounce" style={{ animationDelay: "75ms" }} />
+                  <span className="h-3 w-1 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: "220ms" }} />
+                </div>
+              )}
+              <span className={`px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold border ${
+                isRecording
+                  ? "bg-emerald-950/80 border-emerald-500/50 text-emerald-400 animate-pulse"
+                  : "bg-slate-800 border-slate-700 text-slate-400"
+              }`}>
+                {isRecording ? "🎤 Voice Recording Active..." : "Ready to speak / type"}
+              </span>
+            </div>
           </div>
 
           <div className="relative flex items-center">
