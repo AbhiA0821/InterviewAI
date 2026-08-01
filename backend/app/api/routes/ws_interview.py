@@ -70,7 +70,7 @@ async def websocket_interview_endpoint(websocket: WebSocket, interview_id: int):
             if msg_type == "user_answer":
                 user_text = msg.get("text", "").strip()
                 if not user_text:
-                    continue
+                    user_text = "Candidate provided response."
 
                 # Refresh DB state
                 interview = db.query(Interview).filter(Interview.id == interview_id).first()

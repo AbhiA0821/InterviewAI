@@ -91,6 +91,8 @@ export default function LiveInterviewPage() {
   const [activeKeyPoolCount, setActiveKeyPoolCount] = useState<number>(1);
   const [currentKeyIndex, setCurrentKeyIndex] = useState<number>(1);
   const [isWsConnected, setIsWsConnected] = useState<boolean>(false);
+  const [inputMode, setInputMode] = useState<"voice" | "text">("voice");
+  const [isManualTyping, setIsManualTyping] = useState<boolean>(false);
 
   const transcriptEndRef = useRef<HTMLDivElement | null>(null);
   const recognitionRef = useRef<any>(null);
@@ -99,7 +101,18 @@ export default function LiveInterviewPage() {
   const shouldKeepListeningRef = useRef<boolean>(false);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const ttsTimeoutRef = useRef<any>(null);
+  const submittingTimeoutRef = useRef<any>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const isManualTypingRef = useRef<boolean>(false);
+  const inputModeRef = useRef<"voice" | "text">("voice");
+
+  useEffect(() => {
+    isManualTypingRef.current = isManualTyping;
+  }, [isManualTyping]);
+
+  useEffect(() => {
+    inputModeRef.current = inputMode;
+  }, [inputMode]);
 
   // Auto-trigger proctored fullscreen mode directly on load
   useEffect(() => {
@@ -109,7 +122,7 @@ export default function LiveInterviewPage() {
       if (!document.fullscreenElement) {
         enterFullscreen();
       }
-      if (micActive && !isRecording) {
+      if (micActive && !isRecording && inputMode === "voice") {
         startAutoVoiceListening();
       }
     };
@@ -118,7 +131,7 @@ export default function LiveInterviewPage() {
     return () => {
       window.removeEventListener("click", handleFirstInteraction);
     };
-  }, [micActive, isRecording]);
+  }, [micActive, isRecording, inputMode]);
 
   // Connect WebSocket to backend Gemini Live endpoint
   useEffect(() => {
@@ -136,6 +149,10 @@ export default function LiveInterviewPage() {
     };
 
     ws.onmessage = (event) => {
+      if (submittingTimeoutRef.current) {
+        clearTimeout(submittingTimeoutRef.current);
+        submittingTimeoutRef.current = null;
+      }
       try {
         const data = JSON.parse(event.data);
         if (data.type === "session_started") {
@@ -261,6 +278,8 @@ export default function LiveInterviewPage() {
 
   // Continuous Speech Recognition (Indian English + General Fallback)
   const startAutoVoiceListening = async () => {
+    if (inputModeRef.current === "text") return;
+
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
@@ -297,6 +316,7 @@ export default function LiveInterviewPage() {
       }
 
       recognition.onresult = (event: any) => {
+        if (isManualTypingRef.current || inputModeRef.current === "text") return;
         let fullTranscript = "";
         for (let i = 0; i < event.results.length; i++) {
           fullTranscript += event.results[i][0].transcript;
@@ -319,7 +339,7 @@ export default function LiveInterviewPage() {
       };
 
       recognition.onend = () => {
-        if (shouldKeepListeningRef.current && micActive) {
+        if (shouldKeepListeningRef.current && micActive && inputModeRef.current === "voice") {
           try {
             recognition.start();
           } catch (e) {
@@ -340,14 +360,14 @@ export default function LiveInterviewPage() {
   };
 
   // Speak question with high quality, confident, loud Indian English TTS
-  const speakText = (text: string) => {
+  const speakText = (text: string, retryCount = 0) => {
     if (ttsTimeoutRef.current) {
       clearTimeout(ttsTimeoutRef.current);
       ttsTimeoutRef.current = null;
     }
     if (!("speechSynthesis" in window)) {
       setAvatarStatus("listening");
-      if (micActive) startAutoVoiceListening();
+      if (micActive && inputMode === "voice") startAutoVoiceListening();
       return;
     }
 
@@ -356,8 +376,8 @@ export default function LiveInterviewPage() {
     } catch (e) {}
 
     const voices = window.speechSynthesis.getVoices();
-    if (!voices || voices.length === 0) {
-      const timer = setTimeout(() => speakText(text), 200);
+    if ((!voices || voices.length === 0) && retryCount < 5) {
+      const timer = setTimeout(() => speakText(text, retryCount + 1), 200);
       ttsTimeoutRef.current = timer;
       return;
     }
@@ -368,7 +388,7 @@ export default function LiveInterviewPage() {
         ttsTimeoutRef.current = null;
       }
       setAvatarStatus("listening");
-      if (micActive) startAutoVoiceListening();
+      if (micActive && inputMode === "voice") startAutoVoiceListening();
     };
 
     // Humanize text string with conversational pauses and phonetic spelling for smooth Indian English prosody
@@ -396,9 +416,11 @@ export default function LiveInterviewPage() {
       utterance.pitch = 0.84; // Deep, confident Indian male AI tech lead tone
     }
 
-    const targetVoice = getIndianEnglishVoice(voices, interviewerGender);
-    if (targetVoice) {
-      utterance.voice = targetVoice;
+    if (voices && voices.length > 0) {
+      const targetVoice = getIndianEnglishVoice(voices, interviewerGender);
+      if (targetVoice) {
+        utterance.voice = targetVoice;
+      }
     }
 
     utterance.onstart = () => {
@@ -418,7 +440,7 @@ export default function LiveInterviewPage() {
     };
 
     // Safety timeout: in case utterance.onend fails or hangs in browser
-    const maxDuration = Math.max(6000, (text.length / 10) * 1000 + 4000);
+    const maxDuration = Math.max(5000, (text.length / 10) * 1000 + 3000);
     ttsTimeoutRef.current = setTimeout(() => {
       console.warn("TTS safety timeout reached, forcing transition to listening state.");
       finishSpeaking();
@@ -472,6 +494,7 @@ export default function LiveInterviewPage() {
     setAvatarStatus("thinking");
     setError("");
     setVoiceTranscript("");
+    setIsManualTyping(false);
 
     // Update transcript locally for instantaneous visual feedback
     setInterview((prev) => {
@@ -485,6 +508,13 @@ export default function LiveInterviewPage() {
       };
     });
 
+    if (submittingTimeoutRef.current) clearTimeout(submittingTimeoutRef.current);
+    submittingTimeoutRef.current = setTimeout(() => {
+      setSubmitting(false);
+      setAvatarStatus("listening");
+      setError("Response timeout. Please tap Submit & Next again.");
+    }, 10000);
+
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       try {
         wsRef.current.send(JSON.stringify({ type: "user_answer", text: currentAns }));
@@ -497,6 +527,7 @@ export default function LiveInterviewPage() {
 
     try {
       const res = await interviewService.answerQuestion(targetInterviewId, currentAns);
+      if (submittingTimeoutRef.current) clearTimeout(submittingTimeoutRef.current);
       const updatedInterview: StartInterviewResponse = {
         ...interview,
         interview_id: targetInterviewId,
@@ -511,16 +542,17 @@ export default function LiveInterviewPage() {
         speakText(lastMsg.text);
       } else {
         setAvatarStatus("listening");
-        if (micActive) startAutoVoiceListening();
+        if (micActive && inputMode === "voice") startAutoVoiceListening();
       }
 
       if (res.is_finished) {
         handleFinishInterview();
       }
     } catch (err: any) {
+      if (submittingTimeoutRef.current) clearTimeout(submittingTimeoutRef.current);
       setError("Failed to send answer. Please try again.");
       setAvatarStatus("idle");
-      if (micActive) startAutoVoiceListening();
+      if (micActive && inputMode === "voice") startAutoVoiceListening();
     } finally {
       setSubmitting(false);
     }
@@ -907,13 +939,52 @@ export default function LiveInterviewPage() {
         </div>
 
         {/* BOTTOM DEDICATED LIVE ANSWER / VOICE TRANSCRIPTION BOX */}
-        <div className="shrink-0 w-full bg-slate-900/95 border-t border-slate-800 p-2 sm:p-3 backdrop-blur z-20 shadow-lg space-y-1">
-          <div className="flex items-center justify-between text-[10px] sm:text-[11px] font-extrabold text-slate-400">
-            <span className="flex items-center gap-1.5 text-emerald-400">
-              <Sparkles className="h-3.5 w-3.5" /> Live Voice / Text Answer
-            </span>
+        <div className="shrink-0 w-full bg-slate-900/95 border-t border-slate-800 p-2 sm:p-3 backdrop-blur z-20 shadow-lg space-y-1.5">
+          <div className="flex items-center justify-between text-[10px] sm:text-[11px] font-extrabold text-slate-400 flex-wrap gap-1">
             <div className="flex items-center gap-2">
-              {isRecording && (
+              <span className="flex items-center gap-1.5 text-emerald-400">
+                <Sparkles className="h-3.5 w-3.5" /> Candidate Answer Input
+              </span>
+              {/* Input Mode Selector Pills */}
+              <div className="flex items-center gap-1 bg-slate-950 p-0.5 rounded-lg border border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setInputMode("voice");
+                    setIsManualTyping(false);
+                    if (micActive && !isRecording) startAutoVoiceListening();
+                  }}
+                  className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-all ${
+                    inputMode === "voice"
+                      ? "bg-emerald-950 text-emerald-300 border border-emerald-500/40 shadow-sm"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  🎤 Voice STT
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setInputMode("text");
+                    setIsManualTyping(true);
+                    if (recognitionRef.current) {
+                      try { recognitionRef.current.stop(); } catch (e) {}
+                    }
+                    setIsRecording(false);
+                  }}
+                  className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-all ${
+                    inputMode === "text"
+                      ? "bg-teal-950 text-teal-300 border border-teal-500/40 shadow-sm"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  ⌨️ Type Text Answer
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {inputMode === "voice" && isRecording && (
                 <div className="flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-500/50">
                   <span className="h-3 w-1 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
                   <span className="h-4 w-1 bg-teal-300 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
@@ -922,12 +993,21 @@ export default function LiveInterviewPage() {
                   <span className="h-3 w-1 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: "220ms" }} />
                 </div>
               )}
+              {voiceTranscript.trim().length > 0 && (
+                <span className="text-[10px] font-mono text-teal-400 font-bold bg-teal-950/60 px-2 py-0.5 rounded border border-teal-800">
+                  {voiceTranscript.trim().split(/\s+/).length} words ({voiceTranscript.trim().length} chars)
+                </span>
+              )}
               <span className={`px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold border ${
-                isRecording
+                inputMode === "voice" && isRecording
                   ? "bg-emerald-950/80 border-emerald-500/50 text-emerald-400 animate-pulse"
+                  : inputMode === "text"
+                  ? "bg-teal-950/80 border-teal-500/50 text-teal-300"
                   : "bg-slate-800 border-slate-700 text-slate-400"
               }`}>
-                {isRecording ? "🎤 Voice Recording Active..." : "Ready to speak / type"}
+                {inputMode === "voice"
+                  ? (isRecording ? "🎤 Voice Recording Active..." : "Voice mode active")
+                  : "⌨️ Text mode active - type your response below"}
               </span>
             </div>
           </div>
@@ -936,16 +1016,24 @@ export default function LiveInterviewPage() {
             <textarea
               rows={2}
               value={voiceTranscript}
-              onChange={(e) => setVoiceTranscript(e.target.value)}
+              onFocus={() => setIsManualTyping(true)}
+              onChange={(e) => {
+                setIsManualTyping(true);
+                setVoiceTranscript(e.target.value);
+              }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
-                  if (voiceTranscript.trim() && !submitting) {
+                  if (!submitting) {
                     handleSendVoiceAnswer();
                   }
                 }
               }}
-              placeholder="Type or speak your answer... Press Enter or tap Submit (Voice auto-transcribes live)"
+              placeholder={
+                inputMode === "text"
+                  ? "Type your detailed answer here... Press Enter or tap Submit to send"
+                  : "Type or speak your answer... Press Enter or tap Submit (Voice auto-transcribes live)"
+              }
               className="w-full rounded-xl border border-slate-800 bg-slate-950 p-2 sm:p-2.5 pr-14 text-xs sm:text-sm text-white focus:outline-none focus:ring-1 focus:ring-emerald-400 resize-none font-medium placeholder:text-slate-500 custom-scrollbar shadow-inner"
             />
             <button
