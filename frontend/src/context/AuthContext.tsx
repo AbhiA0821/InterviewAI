@@ -37,49 +37,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Enforce persistent browserLocalPersistence (like Gmail, YouTube, ChatGPT)
         await setPersistence(activeAuth, browserLocalPersistence);
 
-        unsubscribe = onAuthStateChanged(activeAuth, async (user) => {
+        unsubscribe = onAuthStateChanged(activeAuth, (user) => {
           if (user) {
             setFirebaseUser(user);
-            const idToken = await user.getIdToken();
             const email = user.email || "";
             const displayName = user.displayName || email.split("@")[0] || "Candidate";
 
-            const userPayload = {
-              token: idToken,
+            // Instant local state update to remove blocking screen
+            const initialUser: UserProfile = {
+              user_id: 1,
               email: email,
               display_name: displayName,
               photo_url: user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
-              google_id: user.uid,
             };
+            setCurrentUser((prev) => prev || initialUser);
+            setLoading(false);
 
-            try {
-              const profileObj = await authService.loginWithGoogle(userPayload);
-              setCurrentUser(profileObj);
-              sessionStorage.setItem("google_authenticated", "true");
+            // Asynchronous non-blocking background sync with backend & Firestore
+            (async () => {
+              try {
+                const idToken = await user.getIdToken();
+                const userPayload = {
+                  token: idToken,
+                  email: email,
+                  display_name: displayName,
+                  photo_url: user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
+                  google_id: user.uid,
+                };
+                const profileObj = await authService.loginWithGoogle(userPayload);
+                setCurrentUser(profileObj);
+                sessionStorage.setItem("google_authenticated", "true");
 
-              // Sync to Firestore 'users' collection
-              await saveUserToFirestore({
-                uid: user.uid,
-                name: profileObj.display_name || displayName,
-                email: email,
-                photoURL: user.photoURL || profileObj.photo_url,
-              });
-            } catch (err) {
-              console.warn("[AuthContext] Backend login sync notice:", err);
-              setCurrentUser({
-                user_id: 1,
-                email: email,
-                display_name: displayName,
-                photo_url: user.photoURL || undefined,
-              });
-            }
+                // Firestore sync
+                saveUserToFirestore({
+                  uid: user.uid,
+                  name: profileObj.display_name || displayName,
+                  email: email,
+                  photoURL: user.photoURL || profileObj.photo_url,
+                }).catch((e) => console.warn("[Firestore] Background sync notice:", e));
+              } catch (err) {
+                console.warn("[AuthContext] Backend login sync notice:", err);
+              }
+            })();
           } else {
             setFirebaseUser(null);
             setCurrentUser(null);
             localStorage.removeItem("interviewai_token");
             sessionStorage.removeItem("google_authenticated");
+            setLoading(false);
           }
-          setLoading(false);
         });
       } catch (error) {
         console.warn("[AuthContext] Firebase persistence setup warning:", error);

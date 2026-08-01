@@ -26,10 +26,13 @@ export const getFirebaseAuth = async () => {
   let messagingSenderId = import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID;
   let appId = import.meta.env.VITE_FIREBASE_APP_ID;
 
-  // If statically compiled key is missing or is the default fallback, fetch runtime config from FastAPI
+  // If statically compiled key is missing or is the default fallback, fetch runtime config from FastAPI with tight timeout
   if (!apiKey || apiKey === "AIzaSyDp_50V-dRwcfcUQaPz2iasIzfpb01umJA" || String(apiKey).includes("undefined")) {
     try {
-      const res = await fetch("/api/auth/firebase-config");
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 800);
+      const res = await fetch("/api/auth/firebase-config", { signal: controller.signal });
+      clearTimeout(timeoutId);
       if (res.ok) {
         const runtimeConfig = await res.json();
         console.log("🔥 [Firebase Backend Runtime Config]:", runtimeConfig);
@@ -43,7 +46,7 @@ export const getFirebaseAuth = async () => {
         }
       }
     } catch (e) {
-      console.warn("Could not fetch backend runtime firebase config:", e);
+      console.warn("Could not fetch backend runtime firebase config (using default client config):", e);
     }
   }
 
