@@ -123,9 +123,10 @@ You are a Lead Principal Interviewer conducting a professional '{interview_type.
 CANDIDATE RESUME FULL TEXT:
 {resume_summary}
 
-STRICT DOMAIN & RESUME ALIGNMENT RULES:
+STRICT DOMAIN & RESUME ALIGNMENT RULES FOR MAXIMUM INTERVIEW ACCURACY:
 - ALL questions MUST be strictly relevant to the target domain/role: '{target_role}' AND the candidate's uploaded resume content.
-- DO NOT ask questions outside the candidate's resume skills, internships, and target domain context.
+- ZERO HALLUCINATED TECH STACKS: Do NOT ask questions outside the candidate's verified resume skills, internships, and target domain context.
+- ACCURACY WEIGHTING: Prioritize candidate's primary skills, frameworks, and project deliverables with highest technical weight.
 
 PROFESSIONAL INDUSTRY INTERVIEW FRAMEWORK & STRICT RULES:
 
