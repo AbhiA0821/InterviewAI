@@ -175,7 +175,7 @@ export default function AdminDashboardPage() {
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/40 bg-emerald-950/80 px-3.5 py-1 text-xs font-black text-emerald-300 shadow-md">
             <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
-            <span>Admin Platform Control & Firestore Analytics</span>
+            <span>Admin Control • AI Accuracy Benchmarking Enabled</span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white mt-2">
             Administrator Dashboard

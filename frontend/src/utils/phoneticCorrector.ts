@@ -23,7 +23,7 @@ const TECHNICAL_PHONETIC_MAP: Record<string, string> = {
   pytorch: "PyTorch",
   "pi torch": "PyTorch",
   "pie torch": "PyTorch",
-  tensor flow: "TensorFlow",
+  "tensor flow": "TensorFlow",
   tensorflow: "TensorFlow",
   scikitlearn: "scikit-learn",
   "sci kit learn": "scikit-learn",
