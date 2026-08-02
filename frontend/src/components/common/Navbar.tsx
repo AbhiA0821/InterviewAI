@@ -65,7 +65,7 @@ export const Navbar: React.FC = () => {
             <span className="bg-gradient-to-r from-white via-slate-100 to-emerald-400 bg-clip-text text-transparent font-black tracking-wide">
               InterviewAI
             </span>
-            <Badge variant="emerald" dot className="hidden sm:inline-flex text-[10px]">
+            <Badge variant="emerald" dot className="hidden sm:inline-flex text-[10px]" title="Gemini Multi-Key API Pool Connected & Ready">
               AI System Ready
             </Badge>
           </div>
