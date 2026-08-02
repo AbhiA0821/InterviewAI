@@ -104,6 +104,9 @@ export default function FeedbackPage() {
         </div>
 
         <div className="flex items-center gap-3">
+          <Badge variant="emerald" dot title="Comprehensive AI Multi-Metric Score">
+            Report Generated
+          </Badge>
           <Button
             variant="ghost"
             size="sm"
