@@ -500,6 +500,7 @@ export default function ResumeUploadPage() {
               size="md"
               onClick={handleLaunchInterview}
               isLoading={starting}
+              title="Launch AI Live Interview call"
               rightIcon={<ArrowRight className="h-4 w-4" />}
             >
               Start Interview Call
