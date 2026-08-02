@@ -5,9 +5,16 @@ resume, select a target role, and take a live, voice-based AI
 interview — then receive structured feedback and can review their
 interview history.
 
-> **Status:** Project scaffold only. This phase sets up a clean,
-> scalable folder structure and boilerplate config. No features are
-> implemented yet — that comes in subsequent phases.
+> **Status:** Fully functional AI Interview Platform with Multi-Key Gemini Rotation, 14-Metric AI Evaluation Rubric, and Real-time Voice Proctoring.
+
+---
+
+## ⚡ Key Features & AI Accuracy Architecture
+
+- **Multi-Key Gemini API Pool**: Automatic rotation across multiple API keys with 429 rate-limit fallback.
+- **14-Metric Evaluation Rubric**: Comprehensive scoring covering Technical Depth, STAR Structure, System Design Trade-offs, and Communication.
+- **Phonetic ASR Correction**: Post-processing STT dictionary for technical terms (PyTorch, Kubernetes, React, FastAPI).
+- **Session Proctoring**: Tab-switching anti-cheat focus tracking with dynamic penalty calculations.
 
 ---
 
