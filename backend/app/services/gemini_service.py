@@ -314,10 +314,15 @@ Analyze the following interview transcript in detail:
 
 CRITICAL: If the candidate provided no answers, very brief answers (under 5 words total), or left the session early, assign overall_score = 0.0 and recommendation = "Incomplete / Abandoned".
 
-Evaluate the candidate across 14 core dimensions (0-100 scale):
-1. "technical_score": Technical knowledge, accuracy, and engineering depth.
-2. "communication_score": Clarity, articulation, and structure of responses.
-3. "project_understanding_score": Deep understanding of architecture, design, and project trade-offs.
+Evaluate the candidate across 14 core dimensions with strict technical rubrics (0-100 scale):
+- 90-100: Exceptional depth, precise domain terms, STAR structure, quantitative metrics, zero incorrect statements.
+- 75-89: Solid understanding, good technical terms, minor omissions in trade-off analysis.
+- 50-74: Surface-level answer, missing technical depth or STAR methodology.
+- Below 50: Vague, incorrect technical concepts, or unarticulated responses.
+
+1. "technical_score": Technical accuracy, algorithm/architecture correctness, and domain depth.
+2. "communication_score": Clarity, articulation, structured delivery, andSTAR method execution.
+3. "project_understanding_score": Deep understanding of architecture, design trade-offs, and scaling bottlenecks.
 4. "resume_knowledge_score": Authenticity, confidence, and detail regarding resume claims.
 5. "problem_solving_score": Analytical thinking, trade-offs, and logic.
 6. "confidence_score": Composure, assertion, and conviction in answers.
