@@ -58,6 +58,9 @@ def google_authenticate(request: GoogleAuthRequest, db: Session = Depends(get_db
     email = request.email or "google_user@interviewai.com"
     display_name = request.display_name or "Google Candidate"
     photo_url = request.photo_url or ""
+
+    from app.utils.logger import app_logger
+    app_logger.info(f"[Auth] Processing Google authentication for user email: {email}")
     firebase_uid = request.google_id or f"google-{hash(email)}"
 
     # Decode payload if raw JWT token is supplied
