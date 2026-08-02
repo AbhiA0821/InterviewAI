@@ -15,8 +15,10 @@ export interface FeedbackReport {
   technical_score: number;
   problem_solving_score: number;
   confidence_score: number;
+  accuracy_score?: number;
   strengths: string[];
   areas_for_improvement: string[];
+  code_recommendations?: string[];
   detailed_report: {
     summary: string;
     key_takeaway: string;
