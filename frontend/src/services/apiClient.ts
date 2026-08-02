@@ -31,3 +31,14 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
+// Response error handler interceptor
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      console.warn("[ApiClient] Unauthorized 401 response detected.");
+    }
+    return Promise.reject(error);
+  }
+);
+
