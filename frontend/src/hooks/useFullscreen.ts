@@ -65,6 +65,13 @@ export function useFullscreenProctoring() {
     };
   }, []);
 
+  const calculateProctoringScoreMultiplier = (): number => {
+    if (tabSwitchCount === 0) return 1.0;
+    if (tabSwitchCount === 1) return 0.95;
+    if (tabSwitchCount === 2) return 0.88;
+    return 0.75;
+  };
+
   return {
     isFullscreen,
     enterFullscreen,
@@ -73,5 +80,6 @@ export function useFullscreenProctoring() {
     tabSwitchCount,
     showTabWarning,
     dismissTabWarning: () => setShowTabWarning(false),
+    calculateProctoringScoreMultiplier,
   };
 }
