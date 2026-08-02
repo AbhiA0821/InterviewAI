@@ -190,6 +190,7 @@ export default function HistoryPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by role..."
+              title="Search interview history by candidate target role"
               className="rounded-xl border border-slate-800 bg-slate-950 pl-8 pr-3 py-1.5 text-xs font-bold text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-400"
             />
           </div>
