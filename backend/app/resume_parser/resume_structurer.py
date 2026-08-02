@@ -12,14 +12,18 @@ def structure_resume_text(raw_text: str) -> Dict[str, Any]:
     phone_match = re.search(r"\(?\+?\d{1,3}\)?[-.\s]?\d{3}[-.\s]?\d{3}[-.\s]?\d{4}", raw_text)
     phone = phone_match.group(0) if phone_match else ""
 
-    # Common technical skills dictionary scan
+    # Comprehensive multi-domain engineering technical skills dictionary scan
     known_skills = [
         "Python", "JavaScript", "TypeScript", "React", "Node.js", "FastAPI",
         "Express", "SQL", "PostgreSQL", "SQLite", "MongoDB", "Docker", "Kubernetes",
         "AWS", "GCP", "Azure", "Git", "REST API", "GraphQL", "Tailwind", "CSS",
         "HTML", "PyTorch", "TensorFlow", "Pandas", "NumPy", "Scikit-Learn",
         "C++", "Java", "Go", "Rust", "Swift", "Kotlin", "Spring Boot", "Redux",
-        "Next.js", "Vue", "Angular", "CI/CD", "Linux", "System Design"
+        "Next.js", "Vue", "Angular", "CI/CD", "Linux", "System Design",
+        "AutoCAD", "MATLAB", "SolidWorks", "ANSYS", "Verilog", "VHDL",
+        "Embedded C", "Microcontrollers", "PLC", "SCADA", "Revit", "ETABS",
+        "STAAD Pro", "Process Safety", "Thermodynamics", "Data Warehousing",
+        "Power BI", "Tableau", "Spark", "Hadoop", "Penetration Testing"
     ]
     
     extracted_skills = [
