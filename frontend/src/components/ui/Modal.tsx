@@ -49,6 +49,9 @@ export const Modal: React.FC<ModalProps> = ({
 
       {/* Content */}
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title || "Dialog Modal"}
         className={`relative w-full ${widthMap[maxWidth]} glass-panel rounded-2xl shadow-2xl p-6 border border-slate-700/60 z-10 animate-in zoom-in-95 duration-200`}
       >
         <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-800">
