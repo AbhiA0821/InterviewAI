@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { Bot, Edit3, History, LayoutDashboard, LogIn, LogOut, ShieldCheck, UserCheck, Activity } from "lucide-react";
+import { Bot, Edit3, History, LayoutDashboard, LogIn, LogOut, ShieldCheck, UserCheck } from "lucide-react";
 import { Badge } from "../ui/Badge";
 import { Modal } from "../ui/Modal";
 import { Button } from "../ui/Button";

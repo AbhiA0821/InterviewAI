@@ -17,7 +17,6 @@ import {
   Sparkles,
   Subtitles,
   Volume2,
-  Wifi,
   Maximize,
   Minimize,
   AlertTriangle,

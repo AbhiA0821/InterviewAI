@@ -22,9 +22,6 @@ import {
   Video,
   Wrench,
   Zap,
-  TrendingUp,
-  Users,
-  Check,
 } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";

@@ -18,9 +18,6 @@ import {
 import { interviewService, StartInterviewResponse } from "../services/interviewService";
 import { useFullscreenProctoring } from "../hooks/useFullscreen";
 import { getIndianEnglishVoice } from "../utils/voiceUtils";
-import { Button } from "../components/ui/Button";
-import { Card } from "../components/ui/Card";
-import { Badge } from "../components/ui/Badge";
 
 export default function MirrorRoomPage() {
   const { id } = useParams<{ id?: string }>();

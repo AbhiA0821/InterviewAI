@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ParsedResume, resumeService } from "../services/resumeService";
 import { interviewService } from "../services/interviewService";
-import { CheckCircle2, Info, Loader2, Sparkles, Upload, Volume2, Wifi, X, FileText, ArrowRight } from "lucide-react";
+import { CheckCircle2, Info, Loader2, Sparkles, Upload, Volume2, Wifi, X, ArrowRight } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";

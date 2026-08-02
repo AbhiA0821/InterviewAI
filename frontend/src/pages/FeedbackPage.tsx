@@ -56,7 +56,7 @@ export default function FeedbackPage() {
       }
     } catch (err: any) {
       setError("Failed to load feedback report.");
-    } font-sans finally {
+    } finally {
       setLoading(false);
     }
   };
