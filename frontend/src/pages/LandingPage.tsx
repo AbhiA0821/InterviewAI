@@ -1,7 +1,7 @@
 /**
  * LandingPage.tsx
  * ------------------
- * Mocklingo.com-style landing page with hero banner, live interviewer video demo card,
+ * Mocklingo-style landing page with hero banner, live interviewer video demo card,
  * feature highlights, supported domain showcase, candidate testimonials, and practice CTAs.
  */
 
@@ -22,7 +22,13 @@ import {
   Video,
   Wrench,
   Zap,
+  TrendingUp,
+  Users,
+  Check,
 } from "lucide-react";
+import { Button } from "../components/ui/Button";
+import { Card } from "../components/ui/Card";
+import { Badge } from "../components/ui/Badge";
 
 export default function LandingPage() {
   const features = [
@@ -34,7 +40,7 @@ export default function LandingPage() {
     },
     {
       icon: FileText,
-      title: "Resume-Driven Deep Intelligence",
+      title: "Resume-Driven Intelligence",
       description: "Upload your PDF resume. Groq AI automatically extracts your exact skills, projects, certifications, and infers your target domain.",
       color: "from-cyan-500 to-blue-400",
     },
@@ -46,7 +52,7 @@ export default function LandingPage() {
     },
     {
       icon: Award,
-      title: "Analytical Scorecards & Feedback",
+      title: "Analytical Scorecard & Metrics",
       description: "Receive instant performance metrics on Technical Knowledge, HR & Cultural Fit, Communication Clarity, and Confidence.",
       color: "from-amber-500 to-orange-400",
     },
@@ -65,7 +71,7 @@ export default function LandingPage() {
     {
       name: "Priya Sharma",
       role: "Software Development Engineer @ Tech Corp",
-      quote: "Interviewing with Rohan helped me practice full-length technical rounds with live voice feedback. The resume-driven questions were identical to my real interview!",
+      quote: "Interviewing with Riya helped me practice full-length technical rounds with live voice feedback. The resume-driven questions were identical to my real interview!",
       rating: 5,
     },
     {
@@ -85,9 +91,9 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             {/* Left Copy Column */}
             <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/40 bg-emerald-950/80 px-4 py-1.5 text-xs font-bold text-emerald-300 backdrop-blur">
+              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/40 bg-emerald-950/80 px-4 py-1.5 text-xs font-bold text-emerald-300 backdrop-blur shadow-sm">
                 <Sparkles className="h-4 w-4 text-emerald-400" />
-                <span>Next-Gen Interview with Abhi AI Stage</span>
+                <span>Next-Gen Voice AI Interview Suite</span>
               </div>
 
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-white leading-[1.15]">
@@ -102,36 +108,54 @@ export default function LandingPage() {
               </p>
 
               <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-2">
-                <Link
-                  to="/upload"
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 px-8 py-4 text-base font-black text-white shadow-xl shadow-emerald-500/25 transition-all hover:scale-[1.02] hover:shadow-emerald-500/40"
-                >
-                  <Mic className="h-5 w-5" />
-                  <span>Start Free AI Practice</span>
-                  <ArrowRight className="h-5 w-5" />
+                <Link to="/upload" className="w-full sm:w-auto">
+                  <Button
+                    variant="emerald"
+                    size="lg"
+                    className="w-full sm:w-auto font-black shadow-emerald-500/30"
+                    leftIcon={<Mic className="h-5 w-5" />}
+                    rightIcon={<ArrowRight className="h-5 w-5" />}
+                  >
+                    Start Free AI Practice
+                  </Button>
                 </Link>
 
-                <Link
-                  to="/dashboard"
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-700 bg-slate-900/80 px-6 py-4 text-base font-extrabold text-slate-200 hover:bg-slate-800 transition-colors"
-                >
-                  <span>Explore Dashboard</span>
+                <Link to="/dashboard" className="w-full sm:w-auto">
+                  <Button variant="ghost" size="lg" className="w-full sm:w-auto font-bold">
+                    Explore Dashboard
+                  </Button>
                 </Link>
               </div>
 
-              <div className="flex items-center justify-center lg:justify-start gap-6 pt-4 text-xs font-bold text-slate-400">
+              {/* Live Platform Stats */}
+              <div className="grid grid-cols-3 gap-4 pt-6 border-t border-slate-800/80 max-w-lg mx-auto lg:mx-0">
+                <div>
+                  <p className="text-2xl font-black text-white">98.4%</p>
+                  <p className="text-xs text-slate-400 font-semibold mt-0.5">Success Rate</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-black text-emerald-400">15,000+</p>
+                  <p className="text-xs text-slate-400 font-semibold mt-0.5">Mock Interviews</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-black text-cyan-400 font-mono">&lt; 0.5s</p>
+                  <p className="text-xs text-slate-400 font-semibold mt-0.5">AI Response Latency</p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-center lg:justify-start gap-6 pt-2 text-xs font-bold text-slate-400">
                 <span className="flex items-center gap-1.5">
                   <CheckCircle2 className="h-4 w-4 text-emerald-400" /> 100% Resume-Driven
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-400" /> Powered by Groq & Simli AI
+                  <CheckCircle2 className="h-4 w-4 text-emerald-400" /> Groq & Simli AI Engine
                 </span>
               </div>
             </div>
 
             {/* Right Card: Live Interviewer Avatar Demo Stage */}
             <div className="lg:col-span-5 relative">
-              <div className="relative rounded-3xl border border-emerald-500/30 bg-slate-900/90 p-4 shadow-2xl backdrop-blur">
+              <Card variant="glass-hover" glow="emerald" className="p-4 relative">
                 <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 group">
                   <img
                     src="/avatars/robot_avatar.png"
@@ -140,18 +164,20 @@ export default function LandingPage() {
                   />
 
                   {/* Glass Header Tag */}
-                  <div className="absolute top-3 left-3 bg-slate-900/80 backdrop-blur border border-slate-700/60 rounded-full px-3 py-1 flex items-center gap-2 text-xs font-bold text-emerald-300">
+                  <div className="absolute top-3 left-3 bg-slate-900/85 backdrop-blur border border-slate-700/60 rounded-full px-3 py-1 flex items-center gap-2 text-xs font-bold text-emerald-300">
                     <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
                     <span>AI Interviewer (Riya) • Live</span>
                   </div>
 
-                  {/* Waves sound badge */}
-                  <div className="absolute bottom-3 left-3 right-3 bg-slate-900/90 backdrop-blur border border-slate-800 rounded-xl p-3 flex items-center justify-between text-xs">
+                  {/* Audio visualizer floating footer */}
+                  <div className="absolute bottom-3 left-3 right-3 bg-slate-900/90 backdrop-blur border border-slate-800 rounded-xl p-3 flex items-center justify-between text-xs shadow-lg">
                     <div className="flex items-center gap-2">
-                      <Bot className="h-4 w-4 text-emerald-400" />
-                      <span className="font-bold text-slate-200">"Walk me through your key experience..."</span>
+                      <Bot className="h-4 w-4 text-emerald-400 shrink-0" />
+                      <span className="font-bold text-slate-200 truncate">
+                        "Walk me through your key experience..."
+                      </span>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 shrink-0">
                       <span className="h-4 w-1 bg-emerald-400 rounded-full animate-bounce" />
                       <span className="h-6 w-1 bg-emerald-400 rounded-full animate-bounce delay-75" />
                       <span className="h-3 w-1 bg-emerald-400 rounded-full animate-bounce delay-150" />
@@ -161,11 +187,13 @@ export default function LandingPage() {
 
                 <div className="mt-4 flex items-center justify-between px-2 text-xs font-bold text-slate-400">
                   <span className="flex items-center gap-1.5">
-                    <Video className="h-4 w-4 text-teal-400" /> HD Photorealistic Avatar
+                    <Video className="h-4 w-4 text-teal-400" /> Photorealistic Avatar
                   </span>
-                  <span className="text-emerald-400 font-mono">0.4s AI Latency</span>
+                  <Badge variant="emerald" dot>
+                    Active Voice Stream
+                  </Badge>
                 </div>
-              </div>
+              </Card>
             </div>
           </div>
         </div>
@@ -188,16 +216,21 @@ export default function LandingPage() {
             {features.map((feat) => {
               const Icon = feat.icon;
               return (
-                <div
+                <Card
                   key={feat.title}
-                  className="rounded-2xl border border-slate-800 bg-slate-900/80 p-6 transition-all duration-300 hover:border-slate-700 hover:-translate-y-1"
+                  variant="glass-hover"
+                  className="p-6 transition-all duration-300"
                 >
-                  <div className={`flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-tr ${feat.color} text-white mb-5 shadow-lg`}>
+                  <div
+                    className={`flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-tr ${feat.color} text-white mb-5 shadow-lg`}
+                  >
                     <Icon className="h-6 w-6" />
                   </div>
                   <h3 className="text-lg font-bold text-white mb-2">{feat.title}</h3>
-                  <p className="text-xs text-slate-400 leading-relaxed font-medium">{feat.description}</p>
-                </div>
+                  <p className="text-xs text-slate-400 leading-relaxed font-medium">
+                    {feat.description}
+                  </p>
+                </Card>
               );
             })}
           </div>
@@ -214,7 +247,7 @@ export default function LandingPage() {
             </div>
             <Link
               to="/upload"
-              className="inline-flex items-center gap-2 text-xs font-bold text-emerald-400 hover:text-emerald-300"
+              className="inline-flex items-center gap-2 text-xs font-bold text-emerald-400 hover:text-emerald-300 transition-colors"
             >
               <span>View All 20+ Domains</span>
               <ArrowRight className="h-4 w-4" />
@@ -228,18 +261,24 @@ export default function LandingPage() {
                 <Link
                   key={dom.name}
                   to={`/upload?role=${encodeURIComponent(dom.name)}`}
-                  className="group flex items-center justify-between p-5 rounded-2xl border border-slate-800 bg-slate-900/90 hover:border-emerald-500/50 hover:bg-slate-900 transition-all"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-800 text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
-                      <Icon className="h-5 w-5" />
+                  <Card
+                    variant="glass-hover"
+                    className="p-5 flex items-center justify-between group cursor-pointer"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-800 text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-white group-hover:text-emerald-300 transition-colors">
+                          {dom.name}
+                        </h4>
+                        <p className="text-[11px] text-slate-400 font-medium">{dom.count}</p>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-white group-hover:text-emerald-300 transition-colors">{dom.name}</h4>
-                      <p className="text-[11px] text-slate-400 font-medium">{dom.count}</p>
-                    </div>
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-slate-600 group-hover:text-emerald-400 transition-colors" />
+                    <ArrowRight className="h-4 w-4 text-slate-600 group-hover:text-emerald-400 transition-colors" />
+                  </Card>
                 </Link>
               );
             })}
@@ -257,7 +296,7 @@ export default function LandingPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             {testimonials.map((t, idx) => (
-              <div key={idx} className="rounded-3xl border border-slate-800 bg-slate-900/90 p-8 space-y-4 shadow-xl">
+              <Card key={idx} variant="glass" className="p-8 space-y-4 shadow-xl">
                 <div className="flex items-center gap-1 text-amber-400">
                   {[...Array(t.rating)].map((_, i) => (
                     <Star key={i} className="h-4 w-4 fill-amber-400" />
@@ -268,7 +307,7 @@ export default function LandingPage() {
                   <h4 className="text-sm font-bold text-white">{t.name}</h4>
                   <p className="text-xs text-emerald-400 font-semibold">{t.role}</p>
                 </div>
-              </div>
+              </Card>
             ))}
           </div>
         </div>
@@ -283,13 +322,16 @@ export default function LandingPage() {
           <p className="text-sm text-slate-300 font-medium max-w-xl mx-auto">
             Upload your resume, select your target role, and experience a realistic 1-on-1 voice interview with instant feedback.
           </p>
-          <div>
-            <Link
-              to="/upload"
-              className="inline-flex items-center gap-2.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 px-8 py-4 text-base font-black text-white shadow-xl shadow-emerald-500/25 transition-all hover:scale-105"
-            >
-              <Mic className="h-5 w-5" />
-              <span>Start Practice Interview Now</span>
+          <div className="pt-2">
+            <Link to="/upload">
+              <Button
+                variant="emerald"
+                size="lg"
+                className="font-black px-10 shadow-emerald-500/30"
+                leftIcon={<Mic className="h-5 w-5" />}
+              >
+                Start Practice Interview Now
+              </Button>
             </Link>
           </div>
         </div>
@@ -297,3 +339,4 @@ export default function LandingPage() {
     </div>
   );
 }
+
