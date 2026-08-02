@@ -47,6 +47,8 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
     GEMINI_API_KEYS: str = ""  # Comma or newline separated list of multiple Gemini API keys
     GEMINI_MODEL: str = "gemini-1.5-flash"
+    GEMINI_TEMPERATURE: float = 0.7
+    GEMINI_TIMEOUT_SECONDS: float = 5.0
 
     def get_all_gemini_api_keys(self) -> List[str]:
         """
