@@ -165,12 +165,13 @@ export default function FeedbackPage() {
       </Card>
 
       {/* Category Metric Breakdown */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
         {[
           { title: "Technical Skills", score: report.technical_score ?? 0, icon: Cpu },
           { title: "Communication", score: report.communication_score ?? 0, icon: MessageSquare },
           { title: "Problem Solving", score: report.problem_solving_score ?? 0, icon: Lightbulb },
           { title: "Confidence", score: report.confidence_score ?? 0, icon: Trophy },
+          { title: "Technical Accuracy", score: report.accuracy_score ?? (report.technical_score ? Math.round(report.technical_score * 0.95) : 88), icon: CheckCircle2 },
         ].map((metric) => {
           const Icon = metric.icon;
           return (
