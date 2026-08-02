@@ -243,17 +243,25 @@ Respond ONLY with valid JSON array, no markdown codeblocks or extra text.
 
         resume_section = f"\nCANDIDATE RESUME CONTENT:\n{resume_summary[:3000]}\n" if resume_summary else ""
 
+        # Depth check: If candidate gave a very short answer (< 15 words), instruct AI to probe for missing technical details
+        word_count = len(last_answer.split())
+        depth_prompt = ""
+        if word_count < 15 and word_count > 0:
+            depth_prompt = "NOTE: Candidate's response was brief. Gently ask them to elaborate with specific technical architecture, tools, or quantitative metrics."
+
         prompt = f"""
-You are a Lead Principal Interviewer conducting a '{interview_type.upper()}' interview for '{target_role}'.
+You are a Lead Principal Technical Interviewer conducting a '{interview_type.upper()}' interview for '{target_role}'.
 {resume_section}
 Candidate's Spoken Response to Previous Question:
 "{last_answer}"
 
-PROFESSIONAL FOLLOW-UP QUESTION FRAMEWORK:
+{depth_prompt}
+
+PROFESSIONAL FOLLOW-UP QUESTION FRAMEWORK FOR HIGH ACCURACY:
 - Base this follow-up EXCLUSIVELY on the candidate's resume skills, projects, internships, and their previous answer.
 - Probe ONE specific aspect using professional interviewing methods:
-  * For Technical: Ask about specific architecture trade-offs, tool selection rationale, bottlenecks, or quantitative results (e.g., "What specific metric proved that using [Tool X] improved performance in [Project Y]?").
-  * For HR/Behavioral (STAR Method): Ask about their specific Action or Result (e.g., "In the scenario you described regarding [Internship Z], what specific action did you take to resolve the team conflict?").
+  * For Technical: Ask about specific architecture trade-offs, tool selection rationale, bottlenecks, or quantitative results.
+  * For HR/Behavioral (STAR Method): Ask about their specific Action or Result achieved.
 - Keep the follow-up question concise (1-2 natural, human sentences max).
 
 Respond ONLY with the follow-up question text.
