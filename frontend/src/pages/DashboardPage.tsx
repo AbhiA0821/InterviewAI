@@ -142,6 +142,7 @@ export default function DashboardPage() {
         <div className="relative max-w-2xl">
           <div
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            title="Click to search and select your target engineering domain"
             className="flex items-center justify-between rounded-2xl border border-slate-700 bg-slate-950 px-5 py-3.5 text-sm font-extrabold text-white cursor-pointer shadow-inner hover:border-emerald-500/70 transition-all"
           >
             <div className="flex items-center gap-3">
