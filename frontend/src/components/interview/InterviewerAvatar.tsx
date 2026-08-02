@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Mic, Sparkles, Volume2, Video, ShieldCheck } from "lucide-react";
 import { interviewService } from "../../services/interviewService";
+import { Badge } from "../ui/Badge";
 
 export interface InterviewerAvatarProps {
   gender: "female" | "male" | "male1" | "male2";
@@ -59,14 +60,13 @@ export const InterviewerAvatar: React.FC<InterviewerAvatarProps> = ({
       {/* Top Video Call Bar */}
       <div className="flex flex-wrap items-center justify-between gap-2 z-10 shrink-0">
         <div className="flex items-center gap-2">
-          <span className="flex items-center gap-2 text-xs font-bold text-white bg-slate-900/90 px-3 py-1.5 rounded-full border border-slate-800 shadow-md backdrop-blur">
-            <span className={`h-2.5 w-2.5 rounded-full ${status === "speaking" ? "bg-emerald-400 animate-ping" : "bg-emerald-400 animate-pulse"}`} />
-            <span className="font-extrabold">{interviewerName}</span>
-          </span>
-          <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-400 bg-emerald-950/80 px-2.5 py-1 rounded-full border border-emerald-500/40 shadow-sm flex items-center gap-1">
+          <Badge variant="emerald" dot className="py-1 px-3">
+            <span className="font-extrabold text-white">{interviewerName}</span>
+          </Badge>
+          <Badge variant="teal" className="hidden sm:inline-flex text-[10px]">
             <Video className="h-3 w-3" />
             <span>{simliMode}</span>
-          </span>
+          </Badge>
         </div>
 
         {/* AI Persona Selector Pills */}
