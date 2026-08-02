@@ -582,6 +582,7 @@ export default function LiveInterviewPage() {
     }
   };
 
+  // Helper: Format countdown timer (MM:SS) for active interview call
   const formatTimer = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
