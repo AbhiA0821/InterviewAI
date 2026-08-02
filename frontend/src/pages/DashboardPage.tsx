@@ -23,6 +23,9 @@ import {
   Wrench,
   Zap,
 } from "lucide-react";
+import { Button } from "../components/ui/Button";
+import { Card } from "../components/ui/Card";
+import { Badge } from "../components/ui/Badge";
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -69,14 +72,15 @@ export default function DashboardPage() {
   return (
     <div className="space-y-10 pb-16 font-sans text-slate-100 selection:bg-emerald-500/30">
       {/* HIGH-CONTRAST VIBRANT HERO BANNER */}
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-8 md:p-12 border border-slate-800 shadow-2xl">
+      <Card variant="gradient" glow="emerald" className="relative overflow-hidden p-8 md:p-12">
         <div className="absolute -right-16 -top-16 h-96 w-96 rounded-full bg-emerald-500/15 blur-3xl pointer-events-none" />
         <div className="absolute -left-16 -bottom-16 h-96 w-96 rounded-full bg-indigo-500/15 blur-3xl pointer-events-none" />
 
         <div className="relative max-w-4xl space-y-6">
-          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/40 bg-emerald-950/80 px-4 py-1.5 text-xs font-bold text-emerald-300 shadow-md backdrop-blur">
-            <Zap className="h-3.5 w-3.5 text-emerald-400 animate-pulse" />
-            <span>AI Voice & Photorealistic Avatars • Simli WebRTC & Canvas Lip-Sync</span>
+          <div className="inline-flex items-center gap-2">
+            <Badge variant="emerald" dot>
+              AI Voice & Photorealistic Avatars Ready
+            </Badge>
           </div>
 
           <h1 className="text-3xl md:text-5xl font-black tracking-tight text-white leading-tight">
@@ -93,28 +97,32 @@ export default function DashboardPage() {
           </p>
 
           <div className="flex flex-wrap gap-4 pt-4">
-            <button
+            <Button
+              variant="emerald"
+              size="lg"
               onClick={() => handleLaunchRoleInterview(selectedRole)}
-              className="inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 px-8 py-4 text-base font-black text-white shadow-2xl shadow-emerald-500/30 transition-all hover:scale-[1.02] hover:shadow-emerald-500/50"
+              leftIcon={<Mic className="h-5 w-5" />}
+              rightIcon={<ArrowRight className="h-5 w-5" />}
+              className="font-black shadow-emerald-500/30"
             >
-              <Mic className="h-5 w-5" />
-              <span>Start Practice Session</span>
-              <ArrowRight className="h-5 w-5" />
-            </button>
+              Start Practice Session
+            </Button>
 
-            <button
+            <Button
+              variant="ghost"
+              size="lg"
               onClick={() => navigate("/history")}
-              className="inline-flex items-center gap-2 rounded-2xl border border-slate-700 bg-slate-900/90 px-7 py-4 text-base font-extrabold text-slate-200 shadow-md transition-all hover:bg-slate-800 hover:border-emerald-500/40"
+              leftIcon={<Trophy className="h-5 w-5 text-emerald-400" />}
+              className="font-extrabold"
             >
-              <Trophy className="h-5 w-5 text-emerald-400" />
-              <span>View Scorecard Analytics</span>
-            </button>
+              View Scorecard Analytics
+            </Button>
           </div>
         </div>
-      </section>
+      </Card>
 
       {/* SEARCHABLE TARGET ROLE DROPDOWN & AUTO-SUGGESTION SECTION */}
-      <section className="rounded-3xl border border-slate-800 bg-slate-900/90 p-6 md:p-8 space-y-6 shadow-2xl">
+      <Card variant="glass" className="p-6 md:p-8 space-y-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h2 className="text-xl font-black text-white flex items-center gap-2">
@@ -126,9 +134,9 @@ export default function DashboardPage() {
             </p>
           </div>
 
-          <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 bg-emerald-950/80 px-3.5 py-1.5 rounded-full border border-emerald-500/40 self-start md:self-auto">
-            <Sparkles className="h-3.5 w-3.5" /> 20+ Tech Domains Available
-          </span>
+          <Badge variant="teal" dot>
+            20+ Tech Domains Available
+          </Badge>
         </div>
 
         {/* Interactive Searchable Dropdown */}
@@ -146,7 +154,7 @@ export default function DashboardPage() {
 
           {/* Autocomplete Dropdown Menu */}
           {isDropdownOpen && (
-            <div className="absolute top-16 left-0 right-0 z-40 rounded-2xl border border-slate-700 bg-slate-950 p-4 shadow-2xl space-y-3">
+            <div className="absolute top-16 left-0 right-0 z-40 rounded-2xl border border-slate-700 bg-slate-950 p-4 shadow-2xl space-y-3 animate-in fade-in zoom-in-95 duration-150">
               <input
                 type="text"
                 value={searchQuery}
@@ -156,7 +164,7 @@ export default function DashboardPage() {
                 autoFocus
               />
 
-              <div className="max-h-56 overflow-y-auto space-y-1">
+              <div className="max-h-56 overflow-y-auto space-y-1 custom-scrollbar">
                 {filteredRoles.length > 0 ? (
                   filteredRoles.map((role) => (
                     <div
@@ -208,19 +216,19 @@ export default function DashboardPage() {
 
         {/* CTA Launch Selected Role Button */}
         <div className="pt-2 flex justify-end">
-          <button
-            type="button"
+          <Button
+            variant="emerald"
+            size="md"
             onClick={() => handleLaunchRoleInterview(selectedRole)}
-            className="px-7 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-extrabold text-xs shadow-xl transition-all flex items-center gap-2"
+            rightIcon={<ArrowRight className="h-4 w-4" />}
           >
-            <span>Practice Interview for "{selectedRole}"</span>
-            <ArrowRight className="h-4 w-4" />
-          </button>
+            Practice Interview for "{selectedRole}"
+          </Button>
         </div>
-      </section>
+      </Card>
 
       {/* DETAILED ANALYTICAL SCORECARD & PERFORMANCE BREAKDOWN */}
-      <section className="rounded-3xl border border-slate-800 bg-slate-900/90 p-6 md:p-8 space-y-6 shadow-2xl">
+      <Card variant="glass" className="p-6 md:p-8 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
           <div>
             <h2 className="text-xl font-black text-white flex items-center gap-2">
@@ -232,15 +240,14 @@ export default function DashboardPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2 bg-emerald-950/90 px-4 py-2 rounded-full border border-emerald-500/50 text-emerald-300 text-xs font-black shadow-md self-start sm:self-auto">
-            <span>Overall Grade:</span>
-            <span className="text-emerald-400 underline">A+ • Ready to Hire (88.5 Score)</span>
-          </div>
+          <Badge variant="emerald" className="self-start sm:self-auto py-1 px-3">
+            Overall Grade: A+ • Ready to Hire (88.5 Score)
+          </Badge>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Metric 1: Technical Knowledge & Accuracy */}
-          <div className="space-y-2 bg-slate-950 p-4 rounded-2xl border border-slate-800">
+          <div className="space-y-2 bg-slate-950/80 p-4 rounded-2xl border border-slate-800">
             <div className="flex items-center justify-between text-xs font-extrabold text-slate-200">
               <span className="flex items-center gap-2">
                 <Code2 className="h-4 w-4 text-emerald-400" />
@@ -255,7 +262,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Metric 2: Communication Skills */}
-          <div className="space-y-2 bg-slate-950 p-4 rounded-2xl border border-slate-800">
+          <div className="space-y-2 bg-slate-950/80 p-4 rounded-2xl border border-slate-800">
             <div className="flex items-center justify-between text-xs font-extrabold text-slate-200">
               <span className="flex items-center gap-2">
                 <Mic className="h-4 w-4 text-teal-400" />
@@ -270,7 +277,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Metric 3: Analytical Problem Solving */}
-          <div className="space-y-2 bg-slate-950 p-4 rounded-2xl border border-slate-800">
+          <div className="space-y-2 bg-slate-950/80 p-4 rounded-2xl border border-slate-800">
             <div className="flex items-center justify-between text-xs font-extrabold text-slate-200">
               <span className="flex items-center gap-2">
                 <Brain className="h-4 w-4 text-indigo-400" />
@@ -285,7 +292,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Metric 4: Confidence & Delivery */}
-          <div className="space-y-2 bg-slate-950 p-4 rounded-2xl border border-slate-800">
+          <div className="space-y-2 bg-slate-950/80 p-4 rounded-2xl border border-slate-800">
             <div className="flex items-center justify-between text-xs font-extrabold text-slate-200">
               <span className="flex items-center gap-2">
                 <Star className="h-4 w-4 text-amber-400" />
@@ -299,7 +306,7 @@ export default function DashboardPage() {
             <p className="text-[11px] text-slate-400 font-medium">Poised delivery, minimal filler words, and steady composure under follow-up questions.</p>
           </div>
         </div>
-      </section>
+      </Card>
 
       {/* ENGINEERING SPECIALIZATION COMMAND CENTER */}
       <section className="space-y-5">
@@ -316,24 +323,25 @@ export default function DashboardPage() {
           {engineeringBranches.map((item) => {
             const Icon = item.icon;
             return (
-              <div
+              <Card
                 key={item.title}
+                variant="glass-hover"
                 onClick={() => handleLaunchRoleInterview(item.title)}
-                className="group relative cursor-pointer rounded-2xl border border-slate-800 bg-slate-900/80 p-5 transition-all duration-300 hover:-translate-y-1 hover:border-emerald-500/60 hover:shadow-xl"
+                className="p-5 cursor-pointer group"
               >
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-800 text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
                     <Icon className="h-5 w-5" />
                   </div>
-                  <span className="rounded-full bg-emerald-950/80 border border-emerald-500/40 px-2.5 py-0.5 text-[11px] font-bold text-emerald-300">
+                  <Badge variant="emerald" className="text-[10px]">
                     {item.branch}
-                  </span>
+                  </Badge>
                 </div>
                 <h3 className="font-extrabold text-sm text-white group-hover:text-emerald-400 transition-colors">
                   {item.title}
                 </h3>
                 <p className="text-[11px] text-slate-400 font-medium mt-1">5 Tailored Questions + Scorecard</p>
-              </div>
+              </Card>
             );
           })}
         </div>
@@ -341,7 +349,7 @@ export default function DashboardPage() {
 
       {/* FEATURE HIGHLIGHT CARDS */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-6 space-y-3 shadow-xl">
+        <Card variant="glass" className="p-6 space-y-3">
           <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
             <Video className="h-5 w-5" />
           </div>
@@ -349,9 +357,9 @@ export default function DashboardPage() {
           <p className="text-xs text-slate-400 font-medium leading-relaxed">
             Real-time widescreen AI video call stage with realistic lip-sync, phoneme mouth movements, and Indian English speech synthesis.
           </p>
-        </div>
+        </Card>
 
-        <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-6 space-y-3 shadow-xl">
+        <Card variant="glass" className="p-6 space-y-3">
           <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-teal-500/20 text-teal-400 border border-teal-500/30">
             <FileCheck2 className="h-5 w-5" />
           </div>
@@ -359,9 +367,9 @@ export default function DashboardPage() {
           <p className="text-xs text-slate-400 font-medium leading-relaxed">
             Extracts candidate technical skills and experience from PDF resumes to generate custom-tailored interview questions.
           </p>
-        </div>
+        </Card>
 
-        <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-6 space-y-3 shadow-xl">
+        <Card variant="glass" className="p-6 space-y-3">
           <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
             <CheckCircle2 className="h-5 w-5" />
           </div>
@@ -369,8 +377,9 @@ export default function DashboardPage() {
           <p className="text-xs text-slate-400 font-medium leading-relaxed">
             Instant AI evaluation breakdown across Technical Accuracy, Communication Clarity, Analytical Logic, and Confidence.
           </p>
-        </div>
+        </Card>
       </section>
     </div>
   );
 }
+
