@@ -189,6 +189,7 @@ export default function AdminDashboardPage() {
           <button
             onClick={fetchAdminData}
             disabled={loading}
+            title="Fetch real-time candidate scorecards & user records from Firestore"
             className="px-4 py-2.5 rounded-xl border border-slate-800 bg-slate-900 hover:bg-slate-800 text-xs font-bold text-slate-300 transition-all flex items-center gap-2"
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin text-emerald-400" /> : <Sparkles className="h-4 w-4 text-emerald-400" />}
