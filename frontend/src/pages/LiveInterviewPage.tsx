@@ -3,7 +3,8 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { interviewService, StartInterviewResponse } from "../services/interviewService";
 import { InterviewerAvatar } from "../components/interview/InterviewerAvatar";
 import { useFullscreenProctoring } from "../hooks/useFullscreen";
-import { getIndianEnglishVoice, correctSpeechPhonetics } from "../utils/voiceUtils";
+import { getIndianEnglishVoice } from "../utils/voiceUtils";
+import { correctTechnicalPhonetics } from "../utils/phoneticCorrector";
 import { Badge } from "../components/ui/Badge";
 import {
   Camera,
