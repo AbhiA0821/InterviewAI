@@ -4,6 +4,7 @@ import { interviewService, StartInterviewResponse } from "../services/interviewS
 import { InterviewerAvatar } from "../components/interview/InterviewerAvatar";
 import { useFullscreenProctoring } from "../hooks/useFullscreen";
 import { getIndianEnglishVoice, correctSpeechPhonetics } from "../utils/voiceUtils";
+import { Badge } from "../components/ui/Badge";
 import {
   Camera,
   CameraOff,
@@ -650,18 +651,18 @@ export default function LiveInterviewPage() {
         </div>
       )}
 
-      {/* MOCKLINGO TOP HEADER BAR */}
-      <div className="flex items-center justify-between px-3 py-1.5 bg-slate-900/90 border border-slate-800 rounded-xl backdrop-blur shadow-xl z-30 shrink-0">
+      {/* TOP HEADER BAR */}
+      <div className="flex items-center justify-between px-3 py-1.5 bg-slate-900/90 border border-slate-800 rounded-xl backdrop-blur-md shadow-xl z-30 shrink-0">
         <div className="flex items-center gap-3">
           <div className="h-8 w-8 rounded-lg bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 font-black text-base shadow-md">
-            M
+            AI
           </div>
           <div>
             <h1 className="text-xs sm:text-sm font-black tracking-wider text-white flex items-center gap-2">
               <span>{interview.target_role}</span>
-              <span className="hidden sm:inline-block text-[10px] font-bold text-emerald-400 bg-emerald-950/90 px-2.5 py-0.5 rounded-full border border-emerald-500/40">
-                Interview with Abhi Stage
-              </span>
+              <Badge variant="emerald" dot className="hidden sm:inline-flex text-[10px]">
+                Live Stage
+              </Badge>
             </h1>
           </div>
         </div>
@@ -693,7 +694,7 @@ export default function LiveInterviewPage() {
                 ? "bg-emerald-950/90 border-emerald-500/50 text-emerald-400"
                 : "bg-indigo-950/90 border-indigo-500/50 text-indigo-300 hover:bg-indigo-900"
             }`}
-            title="Toggle native proctored fullscreen mode (Hides browser tabs & address bar)"
+            title="Toggle native proctored fullscreen mode"
           >
             {isFullscreen ? <Minimize className="h-3.5 w-3.5" /> : <Maximize className="h-3.5 w-3.5" />}
             <span className="hidden sm:inline">{isFullscreen ? "Exit Fullscreen" : "🖥️ Fullscreen Mode"}</span>
@@ -703,23 +704,15 @@ export default function LiveInterviewPage() {
             type="button"
             onClick={() => setViewMode(viewMode === "split" ? "pip" : "split")}
             className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold transition-all shadow-sm active:scale-95"
-            title="Toggle between 50/50 Split Screen and Floating PiP View"
+            title="Toggle split view vs PiP"
           >
             <LayoutGrid className="h-3.5 w-3.5 text-emerald-400" />
-            <span>{viewMode === "split" ? "50/50 Split Screen" : "PiP Focus"}</span>
+            <span>{viewMode === "split" ? "50/50 Split" : "PiP Focus"}</span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => navigate(`/mirror_room/${interview.interview_id}`)}
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-300 hover:text-white text-xs font-bold transition-all shadow-sm"
-          >
-            <span>🪞 Device Check</span>
-          </button>
-          <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-400 bg-emerald-950/80 px-3 py-1 rounded-full border border-emerald-500/40">
-            <Wifi className="h-3 w-3" />
-            <span>Connected</span>
-          </span>
+          <Badge variant="emerald" dot className="hidden sm:inline-flex">
+            Connected
+          </Badge>
         </div>
       </div>
 
