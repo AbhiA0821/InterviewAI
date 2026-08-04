@@ -44,14 +44,35 @@ def structure_resume_text(raw_text: str) -> Dict[str, Any]:
 
     merged_skills = list(set(extracted_skills + (ai_analysis.get("skills") or [])))
 
+    # Categorize extracted skills
+    languages = [s for s in merged_skills if s in ["Python", "JavaScript", "TypeScript", "C++", "Java", "Go", "Rust", "Swift", "Kotlin", "Embedded C", "SQL"]]
+    frameworks = [s for s in merged_skills if s in ["React", "Node.js", "FastAPI", "Express", "Spring Boot", "Next.js", "Vue", "Angular", "Tailwind", "Django", "PyTorch", "TensorFlow"]]
+    tools = [s for s in merged_skills if s in ["Docker", "Kubernetes", "AWS", "GCP", "Azure", "Git", "AutoCAD", "MATLAB", "SolidWorks", "ANSYS", "Revit", "Power BI", "Tableau"]]
+
+    # Experience level heuristic fallback
+    exp_level = ai_analysis.get("experience_level")
+    if not exp_level:
+        text_lower = raw_text.lower()
+        if any(w in text_lower for w in ["lead", "principal", "senior", "5+ years", "architect", "manager"]):
+            exp_level = "Experienced"
+        elif any(w in text_lower for w in ["intern", "fresher", "graduate", "junior", "student"]):
+            exp_level = "Fresher"
+        else:
+            exp_level = "Intermediate"
+
     return {
         "candidate_name": candidate_name,
         "email": email,
         "phone": phone,
         "skills": merged_skills if merged_skills else ["General Technical Skills"],
+        "skill_categories": {
+            "languages": languages,
+            "frameworks": frameworks,
+            "tools_and_cloud": tools,
+        },
         "domain": ai_analysis.get("domain", "Software Engineer"),
         "job_title": ai_analysis.get("domain", "Software Engineer"),
-        "experience_level": ai_analysis.get("experience_level", "Intermediate"),
+        "experience_level": exp_level,
         "projects": ai_analysis.get("projects") or ["Hands-on Engineering Projects"],
         "education": ai_analysis.get("education") or "Engineering Degree",
         "certifications": ai_analysis.get("certifications") or [],
