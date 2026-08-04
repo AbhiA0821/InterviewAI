@@ -247,7 +247,10 @@ Respond ONLY with valid JSON array, no markdown codeblocks or extra text.
         word_count = len(last_answer.split())
         depth_prompt = ""
         if word_count < 15 and word_count > 0:
-            depth_prompt = "NOTE: Candidate's response was brief. Gently ask them to elaborate with specific technical architecture, tools, or quantitative metrics."
+            depth_prompt = (
+                "CRITICAL: The candidate's response was short (under 15 words). "
+                "Ask a probing follow-up requesting specific technical metrics, architecture choices, or concrete implementation details."
+            )
 
         prompt = f"""
 You are a Lead Principal Technical Interviewer conducting a '{interview_type.upper()}' interview for '{target_role}'.
