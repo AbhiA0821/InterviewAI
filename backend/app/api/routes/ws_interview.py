@@ -42,12 +42,16 @@ async def websocket_interview_endpoint(websocket: WebSocket, interview_id: int):
             await websocket.close()
             return
 
-        # Send initial session handshake metadata
+        # Send initial session handshake metadata with stage tracking
+        from app.interview_engine.session_manager import session_manager
+        state = session_manager.get_state(interview)
         active_keys_count = len(gemini_service.api_keys)
         await websocket.send_json({
             "type": "session_started",
             "interview_id": interview.id,
             "target_role": interview.target_role,
+            "stage": state.stage.value,
+            "stage_description": state.get_stage_description(),
             "active_key_pool_count": active_keys_count,
             "current_key_index": gemini_service.current_key_index + 1,
             "total_questions": len(interview.questions or []),
