@@ -1,10 +1,100 @@
-"""
-session_manager.py
----------------------
-Manages the lifecycle of a live interview session:
-    - Creating a new session tied to a user, resume, and target role
-    - Tracking conversation state/turns
-    - Ending a session and triggering feedback generation
-"""
+import logging
+from datetime import datetime
+from typing import Any, Dict, Optional
+from sqlalchemy.orm import Session
 
-# TODO: implement interview session lifecycle management
+from app.interview_engine.conversation_state import ConversationState, InterviewStage
+from app.interview_engine.question_generator import question_generator
+from app.models.interview import Interview
+from app.models.resume import Resume
+
+logger = logging.getLogger(__name__)
+
+
+class SessionManager:
+    """Manages interview lifecycle, question transitions, state tracking, and transcript histories."""
+
+    def create_session(
+        self,
+        db: Session,
+        target_role: str,
+        resume_id: Optional[int] = None,
+        interview_type: str = "technical",
+        experience_level: str = "Fresher",
+    ) -> Interview:
+        """Create and initialize a new stateful interview session in the database."""
+        resume_summary = "General Engineering experience."
+        resume = None
+        if resume_id:
+            resume = db.query(Resume).filter(Resume.id == resume_id).first()
+
+        if not resume:
+            resume = db.query(Resume).order_by(Resume.id.desc()).first()
+
+        if resume and resume.raw_text:
+            resume_summary = resume.raw_text
+
+        questions = question_generator.generate_initial_questions(
+            target_role=target_role,
+            resume_summary=resume_summary,
+            interview_type=interview_type,
+            num_questions=5,
+        )
+
+        first_q_text = (
+            questions[0]["question"]
+            if questions
+            else f"Welcome to your interview for {target_role}! To start off, please tell me about yourself."
+        )
+
+        initial_transcript = [
+            {
+                "role": "interviewer",
+                "text": first_q_text,
+                "timestamp": datetime.utcnow().isoformat(),
+                "stage": InterviewStage.SELF_INTRO.value,
+            }
+        ]
+
+        interview = Interview(
+            target_role=target_role,
+            resume_id=resume.id if resume else None,
+            questions=questions,
+            transcript=initial_transcript,
+            current_question_index=0,
+            status="in_progress",
+        )
+        db.add(interview)
+        db.commit()
+        db.refresh(interview)
+        return interview
+
+    def get_state(self, interview: Interview) -> ConversationState:
+        """Construct ConversationState dataclass from an Interview DB record."""
+        current_index = interview.current_question_index or 0
+        total_questions = len(interview.questions or []) or 5
+
+        stage = InterviewStage.NOT_STARTED
+        if current_index == 0:
+            stage = InterviewStage.SELF_INTRO
+        elif 1 <= current_index < max(1, total_questions - 2):
+            stage = InterviewStage.RESUME_DEEP_DIVE
+        elif current_index == total_questions - 2:
+            stage = InterviewStage.FOLLOW_UP_PROBING
+        elif current_index >= total_questions - 1:
+            stage = InterviewStage.WRAP_UP
+
+        if interview.status == "completed":
+            stage = InterviewStage.COMPLETED
+
+        return ConversationState(
+            interview_id=interview.id,
+            target_role=interview.target_role,
+            stage=stage,
+            current_turn=current_index,
+            total_questions=total_questions,
+            transcript=interview.transcript or [],
+        )
+
+
+session_manager = SessionManager()
