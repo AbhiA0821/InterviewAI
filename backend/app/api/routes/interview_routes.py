@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.interview_engine.session_manager import session_manager
 from app.database.session import get_db
 from app.models.feedback import Feedback
 from app.models.interview import Interview
@@ -28,63 +29,35 @@ class AnswerRequest(BaseModel):
 
 @router.post("/start")
 def start_interview(request: StartInterviewRequest, db: Session = Depends(get_db)):
-    """Start a new AI interview session."""
-    resume_summary = "General Engineering experience."
+    """Start a new stateful AI interview session using SessionManager."""
     target_role = request.target_role
 
-    resume = None
-    if request.resume_id:
-        resume = db.query(Resume).filter(Resume.id == request.resume_id).first()
-    
-    if not resume:
-        # Auto-fetch candidate's latest uploaded resume if resume_id wasn't explicitly passed
-        resume = db.query(Resume).order_by(Resume.id.desc()).first()
+    # Auto-detect domain if needed
+    if not target_role or target_role in ("General Engineering", "Full Stack Software Engineer"):
+        res = db.query(Resume).order_by(Resume.id.desc()).first()
+        if res and res.raw_text:
+            target_role = gemini_service.auto_detect_domain(res.raw_text[:3000])
 
-    if resume and resume.raw_text:
-        resume_summary = resume.raw_text
-        if not target_role or target_role in ("General Engineering", "Full Stack Software Engineer"):
-            target_role = gemini_service.auto_detect_domain(resume.raw_text[:3000])
-
-    mode_name = (request.interview_type or "technical").upper()
-    questions = gemini_service.generate_interview_questions(
+    interview = session_manager.create_session(
+        db=db,
         target_role=target_role,
-        resume_summary=resume_summary,
-        interview_type=request.interview_type or "technical",
-        num_questions=5,
-    )
-
-    first_q_text = questions[0]["question"] if questions else "Can you introduce yourself?"
-    initial_transcript = [
-        {
-            "role": "interviewer",
-            "text": first_q_text,
-            "timestamp": datetime.utcnow().isoformat(),
-        }
-    ]
-
-
-
-
-    interview = Interview(
-        target_role=request.target_role,
         resume_id=request.resume_id,
-        questions=questions,
-        transcript=initial_transcript,
-        current_question_index=0,
-        status="in_progress",
+        interview_type=request.interview_type or "technical",
+        experience_level=request.experience_level or "Fresher",
     )
-    db.add(interview)
-    db.commit()
-    db.refresh(interview)
+
+    state = session_manager.get_state(interview)
 
     return {
         "id": interview.id,
         "interview_id": interview.id,
         "target_role": interview.target_role,
         "status": interview.status,
-        "questions": questions,
+        "stage": state.stage.value,
+        "stage_description": state.get_stage_description(),
+        "questions": interview.questions,
         "current_question_index": 0,
-        "total_questions": len(questions),
+        "total_questions": len(interview.questions or []),
         "transcript": interview.transcript,
     }
 
@@ -344,11 +317,14 @@ def get_interview(interview_id: int, db: Session = Depends(get_db)):
     interview = db.query(Interview).filter(Interview.id == interview_id).first()
     if not interview:
         raise HTTPException(status_code=404, detail="Interview not found.")
+    state = session_manager.get_state(interview)
     return {
         "id": interview.id,
         "interview_id": interview.id,
         "target_role": interview.target_role,
         "status": interview.status,
+        "stage": state.stage.value,
+        "stage_description": state.get_stage_description(),
         "questions": interview.questions,
         "current_question_index": interview.current_question_index,
         "transcript": interview.transcript,
