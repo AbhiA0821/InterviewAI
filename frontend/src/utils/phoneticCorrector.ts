@@ -73,6 +73,17 @@ const TECHNICAL_PHONETIC_MAP: Record<string, string> = {
   ansys: "ANSYS",
   verilog: "Verilog",
   vhdl: "VHDL",
+  "rest api": "REST API",
+  "restful api": "RESTful API",
+  graphql: "GraphQL",
+  "graph ql": "GraphQL",
+  microservices: "Microservices",
+  "micro services": "Microservices",
+  "system design": "System Design",
+  "ci cd": "CI/CD",
+  "continuous integration": "Continuous Integration",
+  github: "GitHub",
+  git: "Git",
 };
 
 /**
