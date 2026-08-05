@@ -350,11 +350,24 @@ export default function ResumeUploadPage() {
                   </span>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-bold">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                    <span>Skills Extracted from {file?.name || "Resume"}:</span>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-bold">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                      <span>Extracted Profile from {file?.name || "Resume"}:</span>
+                    </div>
+                    {parsedResume?.experience_level && (
+                      <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800">
+                        {parsedResume.experience_level} Level
+                      </span>
+                    )}
                   </div>
+                  {parsedResume?.domain && (
+                    <div className="text-xs text-slate-300 font-semibold bg-slate-950/80 px-3 py-1.5 rounded-lg border border-slate-800 flex items-center justify-between">
+                      <span className="text-slate-400">Auto-Detected Domain:</span>
+                      <span className="text-teal-300 font-extrabold">{parsedResume.domain}</span>
+                    </div>
+                  )}
                   <div className="flex flex-wrap gap-1.5 pt-1">
                     {extractedSkills.map((sk, i) => (
                       <Badge key={i} variant="emerald" className="text-[11px]">
