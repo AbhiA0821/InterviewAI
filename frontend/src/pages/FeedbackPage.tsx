@@ -238,6 +238,43 @@ export default function FeedbackPage() {
         </Card>
       </div>
 
+      {/* Learning Roadmap & Resume Optimization */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {report.learning_roadmap && report.learning_roadmap.length > 0 && (
+          <Card variant="glass" className="p-6 space-y-4 border-teal-500/30">
+            <div className="flex items-center gap-2.5 text-teal-400 font-black text-lg">
+              <Sparkles className="h-6 w-6 text-teal-400" />
+              <h3>Recommended Learning Roadmap</h3>
+            </div>
+            <ul className="space-y-2 text-xs sm:text-sm text-slate-300 font-medium">
+              {report.learning_roadmap.map((item, idx) => (
+                <li key={idx} className="flex items-start gap-2 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800">
+                  <span className="text-teal-400 font-bold">#{idx + 1}</span>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        )}
+
+        {report.resume_suggestions && report.resume_suggestions.length > 0 && (
+          <Card variant="glass" className="p-6 space-y-4 border-indigo-500/30">
+            <div className="flex items-center gap-2.5 text-indigo-400 font-black text-lg">
+              <Award className="h-6 w-6 text-indigo-400" />
+              <h3>Resume Impact Suggestions</h3>
+            </div>
+            <ul className="space-y-2 text-xs sm:text-sm text-slate-300 font-medium">
+              {report.resume_suggestions.map((item, idx) => (
+                <li key={idx} className="flex items-start gap-2 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800">
+                  <span className="text-indigo-400 font-bold">💡</span>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        )}
+      </div>
+
       {/* Interview Transcript Accordion */}
       <Card variant="glass" className="p-6 space-y-4">
         <button
