@@ -26,6 +26,10 @@ dist/
 dist-ssr/
 *.local
 .vite/
+*.tsbuildinfo
+vite.config.js.timestamp-*.mjs
+vite.config.ts.timestamp-*.mjs
+
 
 # --- Firebase / Google service accounts ---
 firebase-service-account*.json
