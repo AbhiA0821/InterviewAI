@@ -662,8 +662,11 @@ export default function LiveInterviewPage() {
             <h1 className="text-xs sm:text-sm font-black tracking-wider text-white flex items-center gap-2">
               <span>{interview.target_role}</span>
               <Badge variant="emerald" dot className="hidden sm:inline-flex text-[10px]">
-                Live Stage
+                {(interview as any).stage_description || "Live Stage"}
               </Badge>
+              <span className="hidden lg:inline-flex text-[11px] font-bold text-teal-400 bg-teal-950/70 border border-teal-800/80 px-2 py-0.5 rounded-md">
+                Q{(interview.current_question_index || 0) + 1} of {interview.questions?.length || 5}
+              </span>
             </h1>
           </div>
         </div>
