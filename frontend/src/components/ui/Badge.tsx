@@ -2,13 +2,17 @@ import React from "react";
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   variant?: "emerald" | "teal" | "indigo" | "amber" | "rose" | "slate";
+  size?: "sm" | "md" | "lg";
   dot?: boolean;
+  glow?: boolean;
 }
 
 export const Badge: React.FC<BadgeProps> = ({
   children,
   variant = "emerald",
+  size = "md",
   dot = false,
+  glow = false,
   className = "",
   ...props
 }) => {
@@ -21,6 +25,14 @@ export const Badge: React.FC<BadgeProps> = ({
     slate: "bg-slate-800 text-slate-300 border-slate-700",
   };
 
+  const sizeStyles = {
+    sm: "px-2 py-0.5 text-[10px]",
+    md: "px-2.5 py-0.5 text-xs",
+    lg: "px-3 py-1 text-sm",
+  };
+
+  const glowStyles = glow ? "shadow-sm shadow-current" : "";
+
   const dotColors = {
     emerald: "bg-emerald-400",
     teal: "bg-teal-300",
@@ -32,7 +44,7 @@ export const Badge: React.FC<BadgeProps> = ({
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${variantStyles[variant]} ${className}`}
+      className={`inline-flex items-center gap-1.5 rounded-full font-semibold border ${variantStyles[variant]} ${sizeStyles[size]} ${glowStyles} ${className}`}
       {...props}
     >
       {dot && (
@@ -42,5 +54,6 @@ export const Badge: React.FC<BadgeProps> = ({
     </span>
   );
 };
+
 
 export default Badge;
