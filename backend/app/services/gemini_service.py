@@ -476,15 +476,41 @@ Respond ONLY with valid JSON.
             "overall_score": overall_score,
             "communication_score": comm_score,
             "technical_score": tech_score,
+            "project_understanding_score": round(tech_score * 0.95, 1),
+            "resume_knowledge_score": round(comm_score * 0.9, 1),
             "problem_solving_score": problem_solving_score,
             "confidence_score": confidence_score,
+            "analytical_thinking_score": problem_solving_score,
+            "leadership_score": round(confidence_score * 0.85, 1),
+            "teamwork_score": round(comm_score * 0.95, 1),
+            "behavioural_score": round(comm_score * 0.9, 1),
+            "time_management_score": 80.0,
+            "professionalism_score": 85.0,
+            "vocabulary_score": round(tech_score * 0.9, 1),
+            "clarity_score": comm_score,
+            "readiness": {
+                "resume_strength": round(tech_score * 0.9, 1),
+                "technical_readiness": tech_score,
+                "hr_readiness": comm_score,
+                "communication_readiness": comm_score,
+                "overall_readiness": overall_score,
+            },
             "strengths": [
-                f"Demonstrated baseline engagement for {target_role}.",
-                "Provided responses to technical interview questions.",
+                f"Demonstrated baseline technical engagement for {target_role}.",
+                "Clear communication and response structure.",
+                "Active participation across interview questions."
             ],
             "areas_for_improvement": [
                 "Include deeper technical specifics and architectural trade-offs.",
-                "Elaborate with specific quantitative results and metrics.",
+                "Elaborate with specific quantitative results and metrics."
+            ],
+            "resume_suggestions": [
+                "Quantify achievements in resume project descriptions with percentage gains.",
+                "Highlight key tools and frameworks in bullet points for quick scanning."
+            ],
+            "learning_roadmap": [
+                f"Review core system design principles relevant to {target_role}.",
+                "Practice STAR method structure for behavioral scenario questions."
             ],
             "detailed_report": {
                 "summary": f"The candidate completed the practice interview for {target_role}.",
