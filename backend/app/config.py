@@ -105,12 +105,29 @@ class Settings(BaseSettings):
     # ------------------------------------------------------------------
     SECRET_KEY: str = "change-me-in-production"
 
+    def is_production(self) -> bool:
+        """Return True if running in production environment."""
+        return self.ENVIRONMENT.lower() in ("production", "prod")
+
+    def validate_configuration(self) -> dict:
+        """Validate core environment variables and return configuration audit info."""
+        has_gemini_keys = len(self.get_all_gemini_api_keys()) > 0
+        return {
+            "environment": self.ENVIRONMENT,
+            "database_url_configured": bool(self.DATABASE_URL),
+            "gemini_api_configured": has_gemini_keys,
+            "gemini_keys_count": len(self.get_all_gemini_api_keys()),
+            "cors_origins_count": len(self.CORS_ORIGINS),
+            "is_production": self.is_production(),
+        }
+
     class Config:
         import os
         backend_env = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".env"))
         env_file = (backend_env, ".env")
         case_sensitive = True
         extra = "ignore"
+
 
 
 @lru_cache
