@@ -50,8 +50,16 @@ app.include_router(ws_interview.router, tags=["ws"])
 @app.get("/api/health")
 @app.get("/health")
 def health_check():
-    """Health check endpoint used by readiness probes."""
-    return {"status": "ok"}
+    """Health check endpoint used by readiness probes and status monitoring."""
+    config_audit = settings.validate_configuration()
+    return {
+        "status": "ok",
+        "app_name": "Interview with Abhi",
+        "version": "1.0.0",
+        "environment": settings.ENVIRONMENT,
+        "config": config_audit,
+    }
+
 
 
 
