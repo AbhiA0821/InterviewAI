@@ -102,29 +102,29 @@ Fill in Firebase, Gemini, and (later) Simli credentials.
 docker-compose up --build
 ```
 
-- Backend available at `http://localhost:8000`
-- Frontend available at `http://localhost:4173` (Docker) or
-  `http://localhost:5173` (`npm run dev`)
+- Backend API available at `http://localhost:8000/api/health`
+- Frontend UI available at `http://localhost:5173` (dev) or via unified single-app server (`python run_unified_app.py`)
 
 ---
 
-## Roadmap (phased build-out)
+## Roadmap & Status
 
-1. ✅ Project scaffold (this phase)
-2. Backend: database models + SQLite setup
-3. Backend: Firebase authentication
-4. Backend: resume upload + PyMuPDF parsing
-5. Backend: interview engine + Gemini / Gemini Live integration
-6. Backend: feedback generation
-7. Frontend: auth flow + routing + layout
-8. Frontend: resume upload + role selection UI
-9. Frontend: live interview UI (audio streaming)
-10. Frontend: feedback + history views
-11. Deployment: Docker, Vercel, Render
-12. Future: real-time AI avatar via Simli
+1. ✅ Project scaffold & directory architecture
+2. ✅ Backend: database models + SQLite / PostgreSQL setup
+3. ✅ Backend: Firebase authentication & JWT verification
+4. ✅ Backend: resume upload + PyMuPDF parsing & domain detection
+5. ✅ Backend: interview engine + Gemini API multi-key pool rotation
+6. ✅ Backend: 14-metric feedback evaluation & scoring engine
+7. ✅ Frontend: auth flow + routing + glassmorphism theme layout
+8. ✅ Frontend: resume upload + parsed section breakdown UI
+9. ✅ Frontend: live interview room + speech-to-text resilience & status badges
+10. ✅ Frontend: feedback report + learning roadmap & history views
+11. ✅ Unified Deployment: Docker, Vercel, Render single-process SPA support
+12. 🔄 Future: real-time AI avatar via Simli
 
 ---
 
 ## License
 
-TBD.
+MIT License - feel free to use and adapt for your interview preparation platform.
+
