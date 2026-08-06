@@ -44,12 +44,18 @@ export const interviewService = {
   startInterview: async (
     targetRole: string,
     resumeId?: number,
-    interviewType: string = "technical"
+    interviewType: string = "technical",
+    jobDescription?: string,
+    difficulty: string = "Intermediate",
+    duration: string = "15 mins"
   ): Promise<StartInterviewResponse> => {
     const response = await apiClient.post<StartInterviewResponse>("/api/interview/start", {
       target_role: targetRole,
       resume_id: resumeId,
       interview_type: interviewType,
+      job_description: jobDescription,
+      difficulty: difficulty,
+      duration: duration,
     });
     return response.data;
   },

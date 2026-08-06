@@ -109,6 +109,8 @@ export default function ResumeUploadPage() {
     setStep("precheck");
   };
 
+  const [jobDescription, setJobDescription] = useState("");
+
   const handleLaunchInterview = async () => {
     setStarting(true);
     setError("");
@@ -119,7 +121,10 @@ export default function ResumeUploadPage() {
       const res = await interviewService.startInterview(
         targetRole,
         parsedResume ? parsedResume.id : undefined,
-        interviewType
+        interviewType,
+        jobDescription,
+        experienceLevel,
+        duration
       );
       navigate(`/mirror_room/${res.interview_id}?gender=${genderParam}&duration=${encodeURIComponent(duration)}`);
     } catch (err: any) {
@@ -234,6 +239,21 @@ export default function ResumeUploadPage() {
                   🧠 Analytical Round
                 </button>
               </div>
+            </div>
+
+            {/* Optional Job Description Input */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-300 flex items-center justify-between">
+                <span>Paste Target Job Description (Optional)</span>
+                <span className="text-[10px] text-emerald-400 font-extrabold">Skill Matching AI</span>
+              </label>
+              <textarea
+                rows={3}
+                value={jobDescription}
+                onChange={(e) => setJobDescription(e.target.value)}
+                placeholder="Paste the target job description to match your resume skills against job requirements..."
+                className="w-full rounded-2xl border border-slate-700 bg-slate-900 p-3 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-400 custom-scrollbar resize-none"
+              />
             </div>
 
             {/* Experience Level Selector */}

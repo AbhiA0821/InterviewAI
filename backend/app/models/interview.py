@@ -19,6 +19,14 @@ class Interview(Base):
     started_at = Column(DateTime, default=datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)
 
+    job_description = Column(String, nullable=True)
+    jd_analysis = Column(JSON, default=dict)
+    interview_type = Column(String, default="technical")
+    difficulty = Column(String, default="Intermediate")
+    duration = Column(String, default="15 mins")
+    coverage_matrix = Column(JSON, default=dict)
+    long_term_memory = Column(JSON, default=dict)
+
     user = relationship("User", back_populates="interviews")
     resume = relationship("Resume", back_populates="interviews")
     feedback = relationship("Feedback", back_populates="interview", uselist=False, cascade="all, delete-orphan")

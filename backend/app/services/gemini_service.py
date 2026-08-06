@@ -244,8 +244,46 @@ Respond ONLY with valid JSON array, no markdown codeblocks or extra text.
             elif role == "interviewer":
                 recent_history.append(f"Interviewer: {text}")
 
-        history_str = "\n".join(recent_history[-6:]) if recent_history else ""
-        resume_section = f"\nCANDIDATE RESUME SUMMARY:\n{resume_summary[:2500]}\n" if resume_summary else ""
+    def analyze_resume_vs_jd(self, resume_text: str, job_description: str) -> Dict[str, Any]:
+        """Analyze candidate resume skills vs Job Description requirements."""
+        prompt = f"""
+Compare this candidate's resume with the target job description.
+
+RESUME TEXT:
+{resume_text[:2500]}
+
+JOB DESCRIPTION:
+{job_description[:2500]}
+
+Identify:
+1. matching_skills: List of technical & domain skills present in both resume and job description.
+2. missing_skills: Important skills required by job description that are NOT on candidate's resume.
+3. core_technologies: Primary tools/frameworks required for the job.
+4. key_projects: Candidate projects relevant to job requirements.
+
+Return ONLY a JSON object:
+{{
+    "matching_skills": ["Python", "PySpark", "SQL"],
+    "missing_skills": ["Kubernetes"],
+    "core_technologies": ["Spark", "Airflow"],
+    "key_projects": ["MedIntel"]
+}}
+"""
+        text = self._generate_content_with_rotation(prompt)
+        if text:
+            try:
+                clean = text.strip()
+                if clean.startswith("```"):
+                    clean = clean.split("\n", 1)[1].rsplit("\n", 1)[0].strip()
+                return json.loads(clean)
+            except Exception:
+                pass
+        return {
+            "matching_skills": ["Technical Architecture"],
+            "missing_skills": [],
+            "core_technologies": [],
+            "key_projects": [],
+        }
 
         prompt = f"""
 You are an expert Lead Technical Interviewer conducting a '{interview_type.upper()}' interview for the target role: '{target_role}'.
@@ -330,22 +368,31 @@ CURRENT QUESTION ASKED:
 CANDIDATE'S SPOKEN ANSWER:
 "{candidate_answer}"
 
-INSTRUCTIONS FOR CONVERSATIONAL FOLLOW-UP / NEXT QUESTION:
-1. Act like an experienced technical interviewer. Carefully analyze the candidate's latest answer.
-2. If the candidate mentioned an important project detail, architecture choice, tool, database, model, metric, or claim (e.g. PySpark, DuckDB, Airflow, PyTorch, React, FastAPI, LLM, missing values, median/mean), ask a sharp follow-up probing WHY they chose it vs alternatives, how they configured it, or what specific transformations they performed.
-3. If the topic has been sufficiently explored, transition naturally to another project, internship, or technical skill mentioned on their resume.
-4. Keep the question natural, conversational, human, and concise (1-2 sentences max).
-5. DO NOT repeat any previous question.
-6. Evaluate the answer internally on a 1-10 scale for relevance, technical accuracy, depth, and clarity.
+INSTRUCTIONS FOR CONVERSATIONAL EVALUATION & NEXT QUESTION GENERATION:
+1. EVALUATION RUBRIC:
+   - Separate technical correctness & domain understanding from speech/grammar accents.
+   - For behavioral questions, evaluate STAR elements (Situation, Task, Action, Result) naturally.
+   - Assign turn score (0-100), identify what was good, what was missing, how to improve, and generate a concise example better answer.
+2. CLAIM VERIFICATION & FOLLOW-UP CONTROL:
+   - If candidate makes an ambitious technical claim (e.g., "processed large data"), probe scale/metrics (e.g. data volume, TPS).
+   - Maximum 2 follow-ups on the same topic. If already probed twice, transition smoothly to another resume project, internship, or technical skill.
+3. CONVERSATIONAL HUMANKIND NATURE:
+   - Keep next question natural, human, and concise (1-2 sentences max).
+   - DO NOT repeat questions.
 
 Return ONLY a valid JSON object:
 {{
+    "score": 82.0,
     "relevance": 8,
-    "technical_accuracy": 7,
+    "technical_accuracy": 8,
     "depth": 7,
-    "clarity": 8,
+    "clarity": 9,
+    "what_was_good": "Clearly explained PySpark usage for vital-sign data pipeline.",
+    "what_was_missing": "Did not specify exact PySpark transformations or window functions used.",
+    "how_to_improve": "Mention specific PySpark functions like selectExpr, withColumn, and na.fill.",
+    "example_better_answer": "I used PySpark to ingest patient vital signs, applied withColumn for timestamp normalization, and handled missing values using median imputation before writing to DuckDB.",
     "needs_followup": true,
-    "followup_reason": "Candidate mentioned PySpark for preprocessing; probe specific transformations.",
+    "followup_reason": "Probe specific PySpark transformations used during data preprocessing.",
     "next_question": "Which specific PySpark transformations did you perform on the patient vital-sign data?"
 }}
 """
@@ -372,10 +419,15 @@ Return ONLY a valid JSON object:
                 resume_summary=resume_summary,
             )
             parsed = {
+                "score": 78.0,
                 "relevance": 8,
                 "technical_accuracy": 7,
                 "depth": 7,
                 "clarity": 8,
+                "what_was_good": "Demonstrated active technical engagement.",
+                "what_was_missing": "Elaborate with specific quantitative results.",
+                "how_to_improve": "Structure response using STAR methodology.",
+                "example_better_answer": "In my project, I implemented data validation pipelines that improved accuracy by 25%.",
                 "needs_followup": True,
                 "followup_reason": "Exploring project technical details.",
                 "next_question": next_q,

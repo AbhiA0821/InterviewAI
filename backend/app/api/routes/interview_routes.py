@@ -19,8 +19,10 @@ router = APIRouter()
 class StartInterviewRequest(BaseModel):
     target_role: str
     resume_id: Optional[int] = None
+    job_description: Optional[str] = None
     interview_type: Optional[str] = "technical"
-    experience_level: Optional[str] = "Fresher"
+    difficulty: Optional[str] = "Intermediate"
+    duration: Optional[str] = "15 mins"
 
 
 class AnswerRequest(BaseModel):
@@ -42,8 +44,10 @@ def start_interview(request: StartInterviewRequest, db: Session = Depends(get_db
         db=db,
         target_role=target_role,
         resume_id=request.resume_id,
+        job_description=request.job_description,
         interview_type=request.interview_type or "technical",
-        experience_level=request.experience_level or "Fresher",
+        difficulty=request.difficulty or "Intermediate",
+        duration=request.duration or "15 mins",
     )
 
     state = session_manager.get_state(interview)
@@ -58,6 +62,9 @@ def start_interview(request: StartInterviewRequest, db: Session = Depends(get_db
         "questions": interview.questions,
         "current_question_index": 0,
         "total_questions": len(interview.questions or []),
+        "jd_analysis": interview.jd_analysis,
+        "coverage_matrix": interview.coverage_matrix,
+        "long_term_memory": interview.long_term_memory,
         "transcript": interview.transcript,
     }
 

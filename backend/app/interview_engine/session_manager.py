@@ -19,8 +19,10 @@ class SessionManager:
         db: Session,
         target_role: str,
         resume_id: Optional[int] = None,
+        job_description: Optional[str] = None,
         interview_type: str = "technical",
-        experience_level: str = "Fresher",
+        difficulty: str = "Intermediate",
+        duration: str = "15 mins",
     ) -> Interview:
         """Create and initialize a new stateful interview session in the database."""
         resume_summary = "General Engineering experience."
@@ -34,11 +36,20 @@ class SessionManager:
         if resume and resume.raw_text:
             resume_summary = resume.raw_text
 
+        # Extract JD skills vs Resume skills comparison if Job Description provided
+        from app.services.gemini_service import gemini_service
+        jd_analysis = {}
+        if job_description and job_description.strip():
+            try:
+                jd_analysis = gemini_service.analyze_resume_vs_jd(resume_summary, job_description)
+            except Exception as e:
+                logger.warning(f"[SessionManager] JD analysis warning: {e}")
+
         questions = question_generator.generate_initial_questions(
             target_role=target_role,
             resume_summary=resume_summary,
             interview_type=interview_type,
-            num_questions=5,
+            num_questions=6,
         )
 
         first_q_text = (
@@ -56,13 +67,42 @@ class SessionManager:
             }
         ]
 
+        initial_memory = {
+            "candidate_projects": [],
+            "technologies_discussed": [],
+            "strong_topics": [],
+            "weak_topics": [],
+            "topics_covered": ["self_introduction"],
+            "topics_remaining": (jd_analysis.get("matching_skills") or []) + ["projects", "internship", "behavioral"],
+            "claims_to_verify": [],
+            "current_topic": "self_introduction",
+            "followup_depth": 0,
+            "max_followup_depth": 2,
+        }
+
+        initial_coverage = {
+            "self_intro": "COVERED",
+            "primary_project": "PENDING",
+            "tech_stack": "PENDING",
+            "internship_experience": "PENDING",
+            "problem_solving": "PENDING",
+            "behavioral_star": "PENDING",
+        }
+
         interview = Interview(
             target_role=target_role,
             resume_id=resume.id if resume else None,
+            job_description=job_description,
+            jd_analysis=jd_analysis,
+            interview_type=interview_type,
+            difficulty=difficulty,
+            duration=duration,
             questions=questions,
             transcript=initial_transcript,
             current_question_index=0,
             status="in_progress",
+            coverage_matrix=initial_coverage,
+            long_term_memory=initial_memory,
         )
         db.add(interview)
         db.commit()

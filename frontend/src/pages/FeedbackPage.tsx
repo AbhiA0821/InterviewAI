@@ -305,6 +305,70 @@ export default function FeedbackPage() {
         )}
       </div>
 
+      {/* Turn-by-Turn Detailed Q&A Review Breakdown */}
+      <Card variant="glass" className="p-6 space-y-5 border-emerald-500/30">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5 text-emerald-400 font-black text-lg">
+            <Sparkles className="h-6 w-6 text-emerald-400 animate-pulse" />
+            <h3>Turn-by-Turn Q&A Detailed Technical Breakdown</h3>
+          </div>
+          <Badge variant="emerald">
+            {report.transcript ? Math.floor(report.transcript.length / 2) : 0} Turns Analyzed
+          </Badge>
+        </div>
+
+        <div className="space-y-4">
+          {report.transcript && report.transcript.length > 0 ? (
+            report.transcript.map((item, idx) => {
+              if (item.role === "interviewer") {
+                const nextUserAns = report.transcript?.[idx + 1]?.role === "user" ? report.transcript[idx + 1].text : "No response recorded.";
+                const turnEval = (item as any).evaluation || {};
+                const turnScore = turnEval.score || 80;
+
+                return (
+                  <div key={idx} className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-3">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <span className="text-xs font-black uppercase text-teal-400 tracking-wider">
+                        Question #{Math.floor(idx / 2) + 1}
+                      </span>
+                      <span className="text-xs font-black text-emerald-400 bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-500/40">
+                        Turn Score: {Math.round(turnScore)}%
+                      </span>
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="text-xs font-extrabold text-slate-400">Interviewer Question:</div>
+                      <p className="text-sm font-bold text-white leading-relaxed">{item.text}</p>
+                    </div>
+
+                    <div className="space-y-1 bg-slate-900/60 p-3 rounded-xl border border-slate-800/80">
+                      <div className="text-xs font-extrabold text-emerald-400">Your Answer:</div>
+                      <p className="text-xs sm:text-sm font-medium text-emerald-100 leading-relaxed">{nextUserAns}</p>
+                    </div>
+
+                    {turnEval.what_was_good && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1">
+                        <div className="bg-emerald-950/40 p-2.5 rounded-xl border border-emerald-500/30 text-emerald-300">
+                          <span className="font-extrabold block text-emerald-400">✓ What Was Good:</span>
+                          {turnEval.what_was_good}
+                        </div>
+                        <div className="bg-amber-950/40 p-2.5 rounded-xl border border-amber-500/30 text-amber-300">
+                          <span className="font-extrabold block text-amber-400">⚠ What To Improve:</span>
+                          {turnEval.how_to_improve || turnEval.what_was_missing || "Elaborate with specific quantitative metrics."}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+              return null;
+            })
+          ) : (
+            <p className="text-xs text-slate-400">No detailed Q&A turns recorded for this session.</p>
+          )}
+        </div>
+      </Card>
+
       {/* Interview Transcript Accordion */}
       <Card variant="glass" className="p-6 space-y-4">
         <button
@@ -313,7 +377,7 @@ export default function FeedbackPage() {
         >
           <div className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-emerald-400" />
-            <span>View Full Interview Transcript & Log</span>
+            <span>View Raw Interview Transcript Log</span>
           </div>
           {showTranscript ? <ChevronUp className="h-5 w-5 text-emerald-400" /> : <ChevronDown className="h-5 w-5 text-slate-400" />}
         </button>
