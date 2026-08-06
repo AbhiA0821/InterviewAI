@@ -232,34 +232,47 @@ Respond ONLY with valid JSON array, no markdown codeblocks or extra text.
         next_index: int,
         resume_summary: str = "",
     ) -> str:
-        """Generate a professional STAR / Technical Deep-Dive follow-up question strictly based on candidate resume & answer."""
+        """Generate a professional STAR / Technical Deep-Dive follow-up question strictly based on candidate resume & previous answer."""
         last_answer = ""
-        for t in reversed(transcript):
-            if t.get("role") == "user":
-                last_answer = t.get("text", "")
-                break
+        recent_history = []
+        for t in (transcript or []):
+            role = t.get("role")
+            text = t.get("text", "").strip()
+            if role == "user":
+                last_answer = text
+                recent_history.append(f"Candidate: {text}")
+            elif role == "interviewer":
+                recent_history.append(f"Interviewer: {text}")
 
-        resume_section = f"\nRESUME CONTEXT:\n{resume_summary[:1200]}\n" if resume_summary else ""
+        history_str = "\n".join(recent_history[-6:]) if recent_history else ""
+        resume_section = f"\nCANDIDATE RESUME SUMMARY:\n{resume_summary[:2500]}\n" if resume_summary else ""
 
-        # Depth check: If candidate gave a short answer (< 15 words), instruct AI to probe
-        word_count = len(last_answer.split())
-        depth_prompt = "Note: Answer was brief (< 15 words). Ask for specific technical details or metrics." if (0 < word_count < 15) else ""
-
-        prompt = f"""You are an interviewer for '{target_role}' ({interview_type.upper()}).
+        prompt = f"""
+You are an expert Lead Technical Interviewer conducting a '{interview_type.upper()}' interview for the target role: '{target_role}'.
 {resume_section}
-Candidate answer: "{last_answer}"
-{depth_prompt}
+RECENT INTERVIEW DIALOGUE:
+{history_str}
 
-Ask 1 concise follow-up question (1-2 natural sentences max) probing their specific architecture choice, trade-off, or STAR result.
-Respond ONLY with the question text."""
+LATEST CANDIDATE ANSWER:
+"{last_answer}"
+
+INSTRUCTIONS FOR NEXT QUESTION GENERATION:
+1. Deeply analyze the candidate's answer and their resume projects, frameworks, databases, and skills.
+2. If the candidate mentioned a specific tool, database, model, or architecture (e.g. PySpark, DuckDB, Airflow, React, FastAPI, PyTorch, Docker, SQL, LLM), ask a sharp follow-up probing WHY they chose it vs alternatives, how they configured it, or what specific data transformations/preprocessing they performed.
+3. If they gave a high-level answer, ask for concrete implementation metrics, scaling approach, or a specific technical challenge they solved.
+4. Keep the question natural, conversational, human, and concise (1-2 sentences max).
+5. DO NOT repeat any previous question from the dialogue history!
+
+Respond ONLY with the next follow-up question text.
+"""
         text = self._generate_content_with_rotation(prompt)
-        if text:
-            return text
+        if text and len(text.strip()) > 10:
+            return text.strip()
 
         # Intelligent Fallback context-aware follow-up
         if last_answer:
-            return f"That's insightful. Regarding what you mentioned about your resume project implementation, can you elaborate on the key technical trade-offs or quantitative results you achieved?"
-        return "Can you elaborate further on your specific technical contributions and architecture choices in that resume project?"
+            return f"That's insightful. Regarding what you mentioned in your answer, can you elaborate on the key technical trade-offs or quantitative results you achieved in your project?"
+        return f"Can you elaborate further on your specific technical contributions and architecture choices for {target_role}?"
 
     def evaluate_interview(
         self, target_role: str, transcript: List[Dict[str, str]]

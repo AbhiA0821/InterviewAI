@@ -812,9 +812,14 @@ export default function LiveInterviewPage() {
                 <span>{thinkingMessages[thinkingMsgIndex]}</span>
               </div>
             ) : (
-              <p className="text-slate-100 text-xs sm:text-sm md:text-base font-semibold leading-relaxed select-text">
-                {activeQuestionText}
-              </p>
+              <div className="space-y-0.5 select-text">
+                <span className="text-[11px] font-black uppercase text-teal-400 tracking-wider block">
+                  Interviewer ({interviewerName}):
+                </span>
+                <p className="text-slate-100 text-xs sm:text-sm md:text-base font-semibold leading-relaxed">
+                  {activeQuestionText}
+                </p>
+              </div>
             )}
           </div>
         </div>
@@ -960,8 +965,8 @@ export default function LiveInterviewPage() {
         <div className="shrink-0 w-full bg-slate-900/95 border-t border-slate-800 p-2 sm:p-3 backdrop-blur z-20 shadow-lg space-y-1.5">
           <div className="flex items-center justify-between text-[10px] sm:text-[11px] font-extrabold text-slate-400 flex-wrap gap-1">
             <div className="flex items-center gap-2">
-              <span className="flex items-center gap-1.5 text-emerald-400">
-                <Sparkles className="h-3.5 w-3.5" /> Candidate Answer Input
+              <span className="flex items-center gap-1.5 text-emerald-400 uppercase font-black tracking-wider text-[11px]">
+                <Sparkles className="h-3.5 w-3.5" /> Your Answer (Live STT / Typed):
               </span>
               {/* Input Mode Selector Pills */}
               <div className="flex items-center gap-1 bg-slate-950 p-0.5 rounded-lg border border-slate-800">

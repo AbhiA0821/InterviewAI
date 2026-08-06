@@ -38,14 +38,22 @@ class QuestionGenerator:
     def get_fallback_questions(
         self, target_role: str, resume_text: str, num_questions: int = 5
     ) -> List[Dict[str, Any]]:
-        """Return high-quality structured fallback questions based on resume keywords."""
+        """Return high-quality structured fallback questions based on resume keywords & project titles."""
         extracted_skills = []
-        keywords = ["python", "java", "react", "sql", "aws", "docker", "fastapi", "autocad", "matlab", "tensorflow", "pytorch"]
+        keywords = ["python", "pyspark", "duckdb", "airflow", "sql", "react", "fastapi", "docker", "aws", "pytorch", "tensorflow", "autocad", "matlab"]
         for kw in keywords:
-            if kw in resume_text.lower():
+            if kw in (resume_text or "").lower():
                 extracted_skills.append(kw.title())
 
         tech_stack = ", ".join(extracted_skills[:3]) if extracted_skills else "your core technical stack"
+
+        # Dynamically extract project title lines from candidate resume text
+        project_title = "your primary project"
+        for line in (resume_text or "").splitlines():
+            line_clean = line.strip()
+            if any(k in line_clean.lower() for k in ["project", "pipeline", "system", "app", "model", "platform", "intel", "bot"]) and len(line_clean) < 60:
+                project_title = line_clean.strip("-|•# ")
+                break
 
         return [
             {
@@ -57,25 +65,25 @@ class QuestionGenerator:
             {
                 "id": 2,
                 "type": "technical",
-                "question": f"Walk me through the system architecture and your key technical contributions to the main project listed on your resume.",
+                "question": f"Walk me through your '{project_title}' project listed on your resume, what problem it solves, and why you selected your primary tech stack.",
                 "difficulty": "Medium",
             },
             {
                 "id": 3,
-                "type": "hr",
-                "question": "In your most recent work experience or internship, what were your core responsibilities and how did you measure success?",
+                "type": "technical",
+                "question": f"In '{project_title}', what specific architectural trade-offs or data preprocessing steps did you perform using {tech_stack}?",
                 "difficulty": "Medium",
             },
             {
                 "id": 4,
                 "type": "technical",
-                "question": f"Your resume highlights experience with {tech_stack}. Can you give a specific example of how you used these tools to solve a complex issue?",
+                "question": f"Regarding your major internship or work experience listed on your resume, what were your core engineering deliverables and key achievements?",
                 "difficulty": "Medium",
             },
             {
                 "id": 5,
                 "type": "analytical",
-                "question": "What technical trade-offs or bottlenecks did you encounter during development, and how would you optimize your solution for scale?",
+                "question": f"What was the most difficult technical bottleneck or error you encountered in your projects, and how would you scale your solution for high production load in {target_role}?",
                 "difficulty": "Hard",
             },
         ]
