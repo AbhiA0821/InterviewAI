@@ -277,6 +277,14 @@ export default function LiveInterviewPage() {
     };
   }, []);
 
+  // Ensure webcam stream binds to video DOM element as soon as loading screen finishes
+  useEffect(() => {
+    if (!loading && userMediaStreamRef.current && userVideoRef.current) {
+      userVideoRef.current.srcObject = userMediaStreamRef.current;
+      userVideoRef.current.play().catch(() => {});
+    }
+  }, [loading, cameraActive, viewMode]);
+
   // Continuous Speech Recognition (Indian English + General Fallback)
   const startAutoVoiceListening = async () => {
     if (inputModeRef.current === "text") return;
@@ -362,6 +370,16 @@ export default function LiveInterviewPage() {
 
   // Speak question with high quality, confident, loud Indian English TTS
   const speakText = (text: string, retryCount = 0) => {
+    // Pause SpeechRecognition while speaker is talking so speaker audio isn't transcribed
+    shouldKeepListeningRef.current = false;
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {}
+    }
+    setIsRecording(false);
+    setVoiceTranscript("");
+
     if (ttsTimeoutRef.current) {
       clearTimeout(ttsTimeoutRef.current);
       ttsTimeoutRef.current = null;
@@ -389,7 +407,10 @@ export default function LiveInterviewPage() {
         ttsTimeoutRef.current = null;
       }
       setAvatarStatus("listening");
-      if (micActive && inputMode === "voice") startAutoVoiceListening();
+      setVoiceTranscript(""); // Clear transcript so candidate starts with fresh box
+      if (micActive && inputModeRef.current === "voice") {
+        setTimeout(() => startAutoVoiceListening(), 350); // Resume STT for candidate spoken response
+      }
     };
 
     // Humanize text string with conversational pauses and phonetic spelling for smooth Indian English prosody
