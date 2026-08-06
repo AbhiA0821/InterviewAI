@@ -6,7 +6,7 @@ import { checkGoogleRedirectResult } from "../services/firebase";
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { isAuthenticated, loginWithGoogle, updateDisplayName } = useAuth();
+  const { isAuthenticated, loginWithGoogle, loginGuestUser, updateDisplayName } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -40,18 +40,19 @@ export default function LoginPage() {
   }, [isAuthenticated, navigate]);
 
   const handleCompleteLogin = async () => {
-    const cleanName = usernameInput.trim();
-    if (!cleanName) {
-      setError("Please enter a valid username.");
-      return;
-    }
+    const cleanName = usernameInput.trim() || "Abhishek Aiapure";
     setLoading(true);
     try {
-      await updateDisplayName(cleanName);
+      if (isAuthenticated) {
+        await updateDisplayName(cleanName);
+      } else {
+        await loginGuestUser(cleanName);
+      }
       setShowUsernameModal(false);
       navigate("/", { replace: true });
     } catch (err: any) {
-      setError(err.message || "Failed to update profile username.");
+      console.warn("Complete login notice:", err);
+      navigate("/", { replace: true });
     } finally {
       setLoading(false);
     }
@@ -65,15 +66,9 @@ export default function LoginPage() {
       await loginWithGoogle();
       navigate("/", { replace: true });
     } catch (err: any) {
-      console.warn("Google authentication error:", err);
-      const errMsg = err?.message || err?.code || String(err);
-      if (err?.code === "auth/popup-closed-by-user" || err?.code === "auth/cancelled-popup-request") {
-        setError("Google sign-in window was closed. Click 'Sign in with Google' to select your account.");
-      } else if (err?.code === "auth/unauthorized-domain") {
-        setError("Firebase Domain Notice: Please add 'interviewai-tvaq.onrender.com' to Authorized Domains in Firebase Console.");
-      } else {
-        setError(`Google Sign-In Notice: ${errMsg}`);
-      }
+      console.warn("Google authentication error, switching to candidate session:", err);
+      await loginGuestUser("Abhishek Aiapure");
+      navigate("/", { replace: true });
     } finally {
       setLoading(false);
     }
@@ -151,13 +146,16 @@ export default function LoginPage() {
               {/* Instant Practice Sign-In Fallback Button */}
               <button
                 type="button"
-                onClick={() => {
-                  setPendingUser({
-                    email: "candidate@interviewai.com",
-                    display_name: localStorage.getItem("user_display_name") || "Abhishek Aiapure",
-                  });
-                  setUsernameInput(localStorage.getItem("user_display_name") || "Abhishek Aiapure");
-                  setShowUsernameModal(true);
+                onClick={async () => {
+                  setLoading(true);
+                  try {
+                    await loginGuestUser("Abhishek Aiapure");
+                    navigate("/", { replace: true });
+                  } catch (e) {
+                    navigate("/", { replace: true });
+                  } finally {
+                    setLoading(false);
+                  }
                 }}
                 disabled={loading}
                 className="w-full rounded-2xl border border-teal-500/40 bg-teal-950/40 hover:bg-teal-900/60 p-3 text-xs font-black text-teal-300 transition-all flex items-center justify-center gap-2 shadow-sm active:scale-95"

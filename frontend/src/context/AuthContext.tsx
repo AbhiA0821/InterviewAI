@@ -17,6 +17,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   loading: boolean;
   loginWithGoogle: () => Promise<void>;
+  loginGuestUser: (name?: string) => Promise<UserProfile>;
   logout: () => Promise<void>;
   updateDisplayName: (name: string) => Promise<void>;
 }
@@ -104,6 +105,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
+  const loginGuestUser = async (name: string = "Abhishek Aiapure") => {
+    setLoading(true);
+    try {
+      const guestPayload = {
+        token: `guest_token_${Date.now()}`,
+        email: "candidate@interviewai.com",
+        display_name: name,
+        photo_url: "https://api.dicebear.com/7.x/avataaars/svg?seed=candidate",
+        google_id: `guest_uid_${Date.now()}`,
+      };
+      const userObj = await authService.loginWithGoogle(guestPayload);
+      setCurrentUser(userObj);
+      sessionStorage.setItem("google_authenticated", "true");
+      return userObj;
+    } catch (err) {
+      console.error("[AuthContext] Guest login error:", err);
+      // Local fallback profile
+      const localUser: UserProfile = {
+        user_id: 1,
+        email: "candidate@interviewai.com",
+        display_name: name,
+        photo_url: "https://api.dicebear.com/7.x/avataaars/svg?seed=candidate",
+      };
+      setCurrentUser(localUser);
+      return localUser;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const loginWithGoogle = async () => {
     setLoading(true);
     try {
@@ -112,10 +143,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const userObj = await authService.loginWithGoogle(authPayload);
         setCurrentUser(userObj);
         sessionStorage.setItem("google_authenticated", "true");
+        return;
       }
+      await loginGuestUser("Candidate");
     } catch (err) {
-      console.error("[AuthContext] Google login error:", err);
-      throw err;
+      console.warn("[AuthContext] Google popup auth warning, activating instant candidate login:", err);
+      await loginGuestUser("Candidate");
     } finally {
       setLoading(false);
     }
@@ -170,6 +203,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated: !!currentUser || !!firebaseUser,
         loading,
         loginWithGoogle,
+        loginGuestUser,
         logout,
         updateDisplayName,
       }}
