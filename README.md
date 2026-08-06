@@ -20,9 +20,8 @@ interview history.
 
 ## Tech Stack
 
-| Layer            | Technology |
-|-------------------|------------|
-| Frontend          | React + Vite + TypeScript + Tailwind CSS + shadcn/ui |
+| Mobile App        | React Native + Expo + TypeScript + expo-av + React Navigation |
+| Frontend (Web)    | React + Vite + TypeScript + Tailwind CSS + shadcn/ui |
 | Backend           | Python + FastAPI |
 | AI                | Gemini API + Gemini Live API |
 | Resume Parsing    | PyMuPDF |
