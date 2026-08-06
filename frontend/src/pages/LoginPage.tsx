@@ -148,8 +148,26 @@ export default function LoginPage() {
                 </div>
               </button>
 
+              {/* Instant Practice Sign-In Fallback Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  setPendingUser({
+                    email: "candidate@interviewai.com",
+                    display_name: localStorage.getItem("user_display_name") || "Abhishek Aiapure",
+                  });
+                  setUsernameInput(localStorage.getItem("user_display_name") || "Abhishek Aiapure");
+                  setShowUsernameModal(true);
+                }}
+                disabled={loading}
+                className="w-full rounded-2xl border border-teal-500/40 bg-teal-950/40 hover:bg-teal-900/60 p-3 text-xs font-black text-teal-300 transition-all flex items-center justify-center gap-2 shadow-sm active:scale-95"
+              >
+                <Sparkles className="h-4 w-4 text-teal-400 animate-pulse" />
+                <span>⚡ Instant Practice Candidate Login (1-Click)</span>
+              </button>
+
               <p className="text-center text-[11px] text-slate-500 font-medium pt-1">
-                1-Click Instant Authentication via Google OAuth 2.0
+                Google OAuth 2.0 & Instant 1-Click Candidate Practice Authentication
               </p>
             </div>
           </div>
