@@ -269,10 +269,122 @@ Respond ONLY with the next follow-up question text.
         if text and len(text.strip()) > 10:
             return text.strip()
 
-        # Intelligent Fallback context-aware follow-up
-        if last_answer:
-            return f"That's insightful. Regarding what you mentioned in your answer, can you elaborate on the key technical trade-offs or quantitative results you achieved in your project?"
-        return f"Can you elaborate further on your specific technical contributions and architecture choices for {target_role}?"
+    def evaluate_turn_and_generate_next(
+        self,
+        target_role: str,
+        interview_type: str,
+        resume_summary: str,
+        current_question: str,
+        candidate_answer: str,
+        transcript_history: List[Dict[str, Any]],
+        question_number: int = 1,
+    ) -> Dict[str, Any]:
+        """
+        Evaluate candidate's latest answer, perform internal scoring, and generate the next dynamic follow-up or new question.
+        Returns: {
+            "relevance": int (1-10),
+            "technical_accuracy": int (1-10),
+            "depth": int (1-10),
+            "clarity": int (1-10),
+            "needs_followup": bool,
+            "followup_reason": str,
+            "next_question": str
+        }
+        """
+        from app.utils.logger import app_logger
+
+        app_logger.info(f"[STT FINAL TRANSCRIPT] candidate answer: '{candidate_answer}'")
+        app_logger.info(f"[ANSWER SENT TO BACKEND] current question: '{current_question}'")
+
+        if not candidate_answer or not candidate_answer.strip():
+            return {
+                "error": "No answer detected. Please try again.",
+                "needs_followup": True,
+                "next_question": current_question,
+            }
+
+        history_dialogue = []
+        for t in (transcript_history or []):
+            role = t.get("role", "")
+            text = t.get("text", "").strip()
+            if role == "user":
+                history_dialogue.append(f"Candidate: {text}")
+            elif role == "interviewer":
+                history_dialogue.append(f"Interviewer: {text}")
+
+        history_str = "\n".join(history_dialogue[-8:]) if history_dialogue else "None"
+        resume_str = resume_summary[:2500] if resume_summary else "General experience"
+
+        prompt = f"""
+You are a Senior Technical Interviewer conducting a live '{interview_type.upper()}' job interview for the role '{target_role}'.
+
+CANDIDATE RESUME SUMMARY:
+{resume_str}
+
+CONVERSATION HISTORY:
+{history_str}
+
+CURRENT QUESTION ASKED:
+"{current_question}"
+
+CANDIDATE'S SPOKEN ANSWER:
+"{candidate_answer}"
+
+INSTRUCTIONS FOR CONVERSATIONAL FOLLOW-UP / NEXT QUESTION:
+1. Act like an experienced technical interviewer. Carefully analyze the candidate's latest answer.
+2. If the candidate mentioned an important project detail, architecture choice, tool, database, model, metric, or claim (e.g. PySpark, DuckDB, Airflow, PyTorch, React, FastAPI, LLM, missing values, median/mean), ask a sharp follow-up probing WHY they chose it vs alternatives, how they configured it, or what specific transformations they performed.
+3. If the topic has been sufficiently explored, transition naturally to another project, internship, or technical skill mentioned on their resume.
+4. Keep the question natural, conversational, human, and concise (1-2 sentences max).
+5. DO NOT repeat any previous question.
+6. Evaluate the answer internally on a 1-10 scale for relevance, technical accuracy, depth, and clarity.
+
+Return ONLY a valid JSON object:
+{{
+    "relevance": 8,
+    "technical_accuracy": 7,
+    "depth": 7,
+    "clarity": 8,
+    "needs_followup": true,
+    "followup_reason": "Candidate mentioned PySpark for preprocessing; probe specific transformations.",
+    "next_question": "Which specific PySpark transformations did you perform on the patient vital-sign data?"
+}}
+"""
+        app_logger.info(f"[LLM INPUT] question: '{current_question}' | answer: '{candidate_answer}'")
+        text = self._generate_content_with_rotation(prompt)
+
+        parsed = None
+        if text:
+            try:
+                clean_json = text.strip()
+                if clean_json.startswith("```"):
+                    clean_json = clean_json.split("\n", 1)[1].rsplit("\n", 1)[0].strip()
+                parsed = json.loads(clean_json)
+            except Exception as parse_err:
+                app_logger.warning(f"[GeminiService] JSON parse warning for turn eval: {parse_err}")
+
+        if not parsed or not isinstance(parsed, dict) or "next_question" not in parsed:
+            # Fallback follow-up generation
+            next_q = self.generate_followup_question(
+                target_role=target_role,
+                interview_type=interview_type,
+                transcript=transcript_history,
+                next_index=question_number,
+                resume_summary=resume_summary,
+            )
+            parsed = {
+                "relevance": 8,
+                "technical_accuracy": 7,
+                "depth": 7,
+                "clarity": 8,
+                "needs_followup": True,
+                "followup_reason": "Exploring project technical details.",
+                "next_question": next_q,
+            }
+
+        app_logger.info(f"[LLM DECISION] needs_followup={parsed.get('needs_followup')} | reason='{parsed.get('followup_reason')}'")
+        app_logger.info(f"[NEXT QUESTION] '{parsed.get('next_question')}'")
+
+        return parsed
 
     def evaluate_interview(
         self, target_role: str, transcript: List[Dict[str, str]]

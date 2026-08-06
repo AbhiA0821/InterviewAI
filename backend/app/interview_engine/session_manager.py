@@ -97,4 +97,100 @@ class SessionManager:
         )
 
 
+    def process_candidate_answer(
+        self,
+        db: Session,
+        interview: Interview,
+        candidate_answer: str,
+    ) -> Dict[str, Any]:
+        """
+        Process incoming candidate answer:
+        1. Validate answer is non-empty.
+        2. Evaluate answer + resume + conversation history via GeminiService.
+        3. Save candidate answer turn AND new interviewer question turn into DB transcript.
+        4. Advance interview state.
+        """
+        clean_answer = (candidate_answer or "").strip()
+        if not clean_answer:
+            return {
+                "error": "No answer detected. Please try again.",
+                "status": "error",
+            }
+
+        from app.services.gemini_service import gemini_service
+
+        resume_summary = "General Engineering experience."
+        if interview.resume_id:
+            resume = db.query(Resume).filter(Resume.id == interview.resume_id).first()
+            if resume and resume.raw_text:
+                resume_summary = resume.raw_text
+
+        current_index = interview.current_question_index or 0
+        transcript = list(interview.transcript or [])
+
+        # Find current question text
+        current_q_text = "Tell me about yourself."
+        for t in reversed(transcript):
+            if t.get("role") == "interviewer":
+                current_q_text = t.get("text", current_q_text)
+                break
+
+        # Append candidate answer to transcript
+        user_turn = {
+            "role": "user",
+            "text": clean_answer,
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+        transcript.append(user_turn)
+
+        # Call Gemini to evaluate answer and generate dynamic follow-up / next question
+        eval_result = gemini_service.evaluate_turn_and_generate_next(
+            target_role=interview.target_role or "Software Engineer",
+            interview_type="technical",
+            resume_summary=resume_summary,
+            current_question=current_q_text,
+            candidate_answer=clean_answer,
+            transcript_history=transcript,
+            question_number=current_index + 1,
+        )
+
+        next_question_text = eval_result.get("next_question") or "Tell me more about your technical experience."
+
+        # Append next interviewer question to transcript
+        interviewer_turn = {
+            "role": "interviewer",
+            "text": next_question_text,
+            "timestamp": datetime.utcnow().isoformat(),
+            "evaluation": {
+                "relevance": eval_result.get("relevance", 8),
+                "technical_accuracy": eval_result.get("technical_accuracy", 7),
+                "depth": eval_result.get("depth", 7),
+                "clarity": eval_result.get("clarity", 8),
+            },
+        }
+        transcript.append(interviewer_turn)
+
+        # Update DB record
+        interview.transcript = transcript
+        interview.current_question_index = current_index + 1
+
+        # Check if total questions limit reached (e.g. 6 turns)
+        if interview.current_question_index >= 6:
+            interview.status = "completed"
+
+        db.commit()
+        db.refresh(interview)
+
+        return {
+            "status": "success",
+            "interview_id": interview.id,
+            "question": next_question_text,
+            "question_index": interview.current_question_index,
+            "total_questions": 6,
+            "is_completed": interview.status == "completed",
+            "evaluation": eval_result,
+            "transcript": interview.transcript,
+        }
+
+
 session_manager = SessionManager()

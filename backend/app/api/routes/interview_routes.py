@@ -66,7 +66,7 @@ def start_interview(request: StartInterviewRequest, db: Session = Depends(get_db
 def answer_question(
     interview_id: int, request: AnswerRequest, db: Session = Depends(get_db)
 ):
-    """Submit candidate response and receive next question or completion signal."""
+    """Submit candidate response and receive next dynamic follow-up question."""
     interview = db.query(Interview).filter(Interview.id == interview_id).first()
     if not interview:
         raise HTTPException(status_code=404, detail="Interview not found.")
@@ -74,97 +74,27 @@ def answer_question(
     if interview.status != "in_progress":
         raise HTTPException(status_code=400, detail="Interview is already completed.")
 
-    # Record user response
-    current_transcript = list(interview.transcript or [])
-    current_transcript.append(
-        {
-            "role": "user",
-            "text": request.answer_text,
-            "timestamp": datetime.utcnow().isoformat(),
-        }
+    if not request.answer_text or not request.answer_text.strip():
+        raise HTTPException(status_code=400, detail="No answer detected. Please try again.")
+
+    result = session_manager.process_candidate_answer(
+        db=db,
+        interview=interview,
+        candidate_answer=request.answer_text,
     )
 
-    next_index = interview.current_question_index + 1
-    questions_list = list(interview.questions or [])
-    total_questions = max(len(questions_list), 5)
-    is_finished = next_index >= total_questions
-
-    if not is_finished:
-        resume_text = ""
-        if interview.resume_id:
-            res_obj = db.query(Resume).filter(Resume.id == interview.resume_id).first()
-            if res_obj and res_obj.raw_text:
-                resume_text = res_obj.raw_text
-        if not resume_text:
-            last_res = db.query(Resume).order_by(Resume.id.desc()).first()
-            if last_res and last_res.raw_text:
-                resume_text = last_res.raw_text
-
-        try:
-            followup_q = gemini_service.generate_followup_question(
-                target_role=interview.target_role or "Software Engineer",
-                interview_type="technical",
-                transcript=current_transcript,
-                next_index=next_index,
-                resume_summary=resume_text,
-            )
-        except Exception:
-            if next_index < len(questions_list):
-                followup_q = questions_list[next_index].get(
-                    "question",
-                    "Can you elaborate further on your experience with that?",
-                )
-            else:
-                followup_q = (
-                    "Thank you. Can you elaborate further on your key technical accomplishments?"
-                )
-
-        current_transcript.append(
-            {
-                "role": "interviewer",
-                "text": followup_q,
-                "timestamp": datetime.utcnow().isoformat(),
-            }
-        )
-
-        if questions_list and next_index < len(questions_list):
-            questions_list[next_index]["question"] = followup_q
-        else:
-            questions_list.append(
-                {
-                    "id": next_index + 1,
-                    "type": "technical",
-                    "question": followup_q,
-                    "difficulty": "Medium",
-                }
-            )
-
-        interview.questions = questions_list
-        interview.current_question_index = next_index
-
-    else:
-        current_transcript.append(
-            {
-                "role": "interviewer",
-                "text": "Thank you! That completes our interview questions. Generating your feedback report now...",
-                "timestamp": datetime.utcnow().isoformat(),
-            }
-        )
-        interview.status = "completed"
-        interview.completed_at = datetime.utcnow()
-
-    interview.transcript = current_transcript
-    db.commit()
-    db.refresh(interview)
+    if result.get("status") == "error":
+        raise HTTPException(status_code=400, detail=result.get("error"))
 
     return {
         "id": interview.id,
         "interview_id": interview.id,
         "current_question_index": interview.current_question_index,
-        "total_questions": len(interview.questions or []),
-        "is_finished": is_finished,
+        "total_questions": 6,
+        "is_finished": interview.status == "completed",
         "transcript": interview.transcript,
         "questions": interview.questions,
+        "evaluation": result.get("evaluation"),
     }
 
 

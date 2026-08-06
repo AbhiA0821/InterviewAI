@@ -503,7 +503,14 @@ export default function LiveInterviewPage() {
     const targetInterviewId = interview.interview_id || (interview as any).id || Number(id);
     if (!targetInterviewId) return;
 
-    const currentAns = voiceTranscript.trim() || "Candidate provided response.";
+    const currentAns = voiceTranscript.trim();
+    if (!currentAns) {
+      setError("No answer detected. Please try again.");
+      return;
+    }
+
+    console.log("[STT FINAL TRANSCRIPT]", currentAns);
+    console.log("[ANSWER SENT TO BACKEND]", { interview_id: targetInterviewId, candidate_answer: currentAns });
 
     shouldKeepListeningRef.current = false;
     if (recognitionRef.current) {
