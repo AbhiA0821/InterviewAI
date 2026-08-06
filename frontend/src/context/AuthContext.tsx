@@ -30,20 +30,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     let unsubscribe: () => void = () => {};
+    let safetyTimer: any = null;
+
+    // 2.5s maximum safety timeout to guarantee loading screen never freezes
+    safetyTimer = setTimeout(() => {
+      setLoading(false);
+    }, 2500);
 
     const initAuth = async () => {
       try {
         const activeAuth = await getFirebaseAuth();
-        // Enforce persistent browserLocalPersistence (like Gmail, YouTube, ChatGPT)
         await setPersistence(activeAuth, browserLocalPersistence);
 
         unsubscribe = onAuthStateChanged(activeAuth, (user) => {
+          if (safetyTimer) clearTimeout(safetyTimer);
           if (user) {
             setFirebaseUser(user);
             const email = user.email || "";
             const displayName = user.displayName || email.split("@")[0] || "Candidate";
 
-            // Instant local state update to remove blocking screen
             const initialUser: UserProfile = {
               user_id: 1,
               email: email,
@@ -53,7 +58,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setCurrentUser((prev) => prev || initialUser);
             setLoading(false);
 
-            // Asynchronous non-blocking background sync with backend & Firestore
             (async () => {
               try {
                 const idToken = await user.getIdToken();
@@ -68,7 +72,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 setCurrentUser(profileObj);
                 sessionStorage.setItem("google_authenticated", "true");
 
-                // Firestore sync
                 saveUserToFirestore({
                   uid: user.uid,
                   name: profileObj.display_name || displayName,
@@ -88,13 +91,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         });
       } catch (error) {
+        if (safetyTimer) clearTimeout(safetyTimer);
         console.warn("[AuthContext] Firebase persistence setup warning:", error);
         setLoading(false);
       }
     };
 
     initAuth();
-    return () => unsubscribe();
+    return () => {
+      if (safetyTimer) clearTimeout(safetyTimer);
+      unsubscribe();
+    };
   }, []);
 
   const loginWithGoogle = async () => {

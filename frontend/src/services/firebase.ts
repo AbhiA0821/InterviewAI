@@ -61,7 +61,8 @@ export const getFirebaseAuth = async () => {
 
   console.log("🔥 [Firebase Active Config Key]:", finalConfig.apiKey);
 
-  firebaseApp = initializeApp(finalConfig, "interviewai-runtime-app-" + Date.now());
+  const existingApps = getApps();
+  firebaseApp = existingApps.length ? existingApps[0] : initializeApp(finalConfig, "interviewai-main-app");
   authInstance = getAuth(firebaseApp);
   return authInstance;
 };
