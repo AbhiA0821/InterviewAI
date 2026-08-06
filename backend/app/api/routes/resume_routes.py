@@ -10,6 +10,7 @@ router = APIRouter()
 
 
 @router.post("/upload")
+@router.post("/parse")
 async def upload_resume(file: UploadFile = File(...), db: Session = Depends(get_db)):
     """Upload PDF resume, extract text, structure parsed data, and store in DB."""
     if not file.filename.endswith(".pdf"):
@@ -18,6 +19,10 @@ async def upload_resume(file: UploadFile = File(...), db: Session = Depends(get_
     pdf_bytes = await file.read()
     if not pdf_bytes:
         raise HTTPException(status_code=400, detail="File is empty.")
+
+    MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB limit
+    if len(pdf_bytes) > MAX_FILE_SIZE:
+        raise HTTPException(status_code=400, detail="File size exceeds maximum limit of 10MB.")
 
     try:
         raw_text = extract_text_from_pdf_bytes(pdf_bytes)

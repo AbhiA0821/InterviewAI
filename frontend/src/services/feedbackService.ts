@@ -18,6 +18,8 @@ export interface FeedbackReport {
   accuracy_score?: number;
   strengths: string[];
   areas_for_improvement: string[];
+  resume_suggestions?: string[];
+  learning_roadmap?: string[];
   code_recommendations?: string[];
   detailed_report: {
     summary: string;

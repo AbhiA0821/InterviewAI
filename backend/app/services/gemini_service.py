@@ -77,10 +77,8 @@ class GeminiService:
                     self.clients[api_key] = client
                 except Exception as e:
                     logger.warning(f"[GeminiService] Error initializing client for key {key_snippet}: {e}")
-                    continue
-
             try:
-                models_to_try = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-flash-latest"]
+                models_to_try = [self.model_name, "gemini-2.0-flash", "gemini-1.5-flash"]
                 unique_models = []
                 for m in models_to_try:
                     if m and m not in unique_models:
@@ -241,34 +239,19 @@ Respond ONLY with valid JSON array, no markdown codeblocks or extra text.
                 last_answer = t.get("text", "")
                 break
 
-        resume_section = f"\nCANDIDATE RESUME CONTENT:\n{resume_summary[:3000]}\n" if resume_summary else ""
+        resume_section = f"\nRESUME CONTEXT:\n{resume_summary[:1200]}\n" if resume_summary else ""
 
-        # Depth check: If candidate gave a very short answer (< 15 words), instruct AI to probe for missing technical details
+        # Depth check: If candidate gave a short answer (< 15 words), instruct AI to probe
         word_count = len(last_answer.split())
-        depth_prompt = ""
-        if word_count < 15 and word_count > 0:
-            depth_prompt = (
-                "CRITICAL: The candidate's response was short (under 15 words). "
-                "Ask a probing follow-up requesting specific technical metrics, architecture choices, or concrete implementation details."
-            )
+        depth_prompt = "Note: Answer was brief (< 15 words). Ask for specific technical details or metrics." if (0 < word_count < 15) else ""
 
-        prompt = f"""
-You are a Lead Principal Technical Interviewer conducting a '{interview_type.upper()}' interview for '{target_role}'.
+        prompt = f"""You are an interviewer for '{target_role}' ({interview_type.upper()}).
 {resume_section}
-Candidate's Spoken Response to Previous Question:
-"{last_answer}"
-
+Candidate answer: "{last_answer}"
 {depth_prompt}
 
-PROFESSIONAL FOLLOW-UP QUESTION FRAMEWORK FOR HIGH ACCURACY:
-- Base this follow-up EXCLUSIVELY on the candidate's resume skills, projects, internships, and their previous answer.
-- Probe ONE specific aspect using professional interviewing methods:
-  * For Technical: Ask about specific architecture trade-offs, tool selection rationale, bottlenecks, or quantitative results.
-  * For HR/Behavioral (STAR Method): Ask about their specific Action or Result achieved.
-- Keep the follow-up question concise (1-2 natural, human sentences max).
-
-Respond ONLY with the follow-up question text.
-"""
+Ask 1 concise follow-up question (1-2 natural sentences max) probing their specific architecture choice, trade-off, or STAR result.
+Respond ONLY with the question text."""
         text = self._generate_content_with_rotation(prompt)
         if text:
             return text

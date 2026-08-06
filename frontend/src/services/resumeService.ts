@@ -9,6 +9,8 @@ import { apiClient } from "./apiClient";
 export interface ParsedResume {
   id: number;
   original_filename: string;
+  domain?: string;
+  experience_level?: string;
   parsed_json: {
     candidate_name?: string;
     email?: string;

@@ -23,13 +23,13 @@ export default function NotFoundPage() {
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
           <Link to="/dashboard">
-            <Button variant="gradient" className="w-full sm:w-auto flex items-center justify-center gap-2">
+            <Button variant="emerald" className="w-full sm:w-auto flex items-center justify-center gap-2">
               <Home className="w-4 h-4" />
               Go to Dashboard
             </Button>
           </Link>
           <button onClick={() => window.history.back()}>
-            <Button variant="secondary" className="w-full sm:w-auto flex items-center justify-center gap-2">
+            <Button variant="outline" className="w-full sm:w-auto flex items-center justify-center gap-2">
               <ArrowLeft className="w-4 h-4" />
               Go Back
             </Button>

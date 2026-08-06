@@ -27,6 +27,34 @@ app = FastAPI(
 # ---------------------------------------------------------------------------
 # Middleware
 # ---------------------------------------------------------------------------
+import time
+from collections import defaultdict
+from fastapi import Request, Response
+
+client_request_history = defaultdict(list)
+RATE_LIMIT_WINDOW_SECONDS = 60
+MAX_REQUESTS_PER_WINDOW = 60
+
+@app.middleware("http")
+async def rate_limiting_middleware(request: Request, call_next):
+    if request.url.path in ("/health", "/api/health") or not request.url.path.startswith("/api/"):
+        return await call_next(request)
+
+    client_ip = request.client.host if request.client else "127.0.0.1"
+    now = time.time()
+    timestamps = [t for t in client_request_history[client_ip] if now - t < RATE_LIMIT_WINDOW_SECONDS]
+    client_request_history[client_ip] = timestamps
+
+    if len(timestamps) >= MAX_REQUESTS_PER_WINDOW:
+        return Response(
+            content='{"detail": "Rate limit exceeded. Please wait a minute before making more requests."}',
+            status_code=429,
+            media_type="application/json",
+        )
+
+    client_request_history[client_ip].append(now)
+    return await call_next(request)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

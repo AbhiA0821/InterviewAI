@@ -9,6 +9,17 @@ npm-debug.*
 *.mobileprovision
 *.orig.*
 web-build/
+*.apk
+*.aab
+InterviewAI.apk
+
+# Android build outputs
+android/build/
+android/app/build/
+android/.gradle/
+android/.cxx/
+android/app/.cxx/
 
 # macOS
 .DS_Store
+
